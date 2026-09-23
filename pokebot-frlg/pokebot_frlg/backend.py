@@ -402,11 +402,19 @@ class BackendWorker(QThread):
             # from this starting pocket. Use D-pad here; left-stick movement
             # is only for the battle command grid.
             self.status.emit({"state":"CAPTURE_MENU","message":"Auto Capture: moving to Poké Balls pocket (RIGHT x2)…"})
-            for _ in range(2):
+            # Bag pocket tabs need a slower, discrete D-pad transition than the
+            # battle command grid. Give the Bag time to finish opening, then
+            # separate each RIGHT press so neither input is lost by the UI.
+            if not self._sleep(.40):
+                return False
+            for index in range(2):
                 self.bot.click("DRIGHT")
-                if not self._sleep(.18):
+                if not self._sleep(.45):
                     return False
-            self.bot.click("A"); self._sleep(.45)
+            self.status.emit({"state":"CAPTURE_MENU","message":"Auto Capture: selecting Poké Balls pocket…"})
+            self.bot.click("A")
+            if not self._sleep(.65):
+                return False
 
             # Select the configured listed ball. We deliberately use DOWN, not
             # the battle-menu stick, because the ball list is a vertical list.
