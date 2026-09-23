@@ -209,8 +209,16 @@ class BackendWorker(QThread):
         return self.bot.read_heap(BATTLE_MENU,1)[0] in (0x01,0x02)
 
     def _wait_battle_menu(self, timeout=20.0, label="Auto Capture"):
-        """Wait for the command menu without pressing buttons blindly."""
+        """Wait for the FRLG command menu, actively clearing encounter text.
+
+        The Switch FRLG wrapper can remain in the battle/text transition after
+        the wild-Pokémon message. Polling BATTLE_MENU alone can leave Auto
+        Capture waiting forever because no input is being sent to advance the
+        remaining battle text. B is used here rather than A so it can clear
+        text without selecting FIGHT if the command menu appears between polls.
+        """
         deadline=time.monotonic()+float(timeout)
+        next_clear=0.0
         self.status.emit({"state":"CAPTURE_WAIT","message":f"{label}: waiting for the battle command menu…"})
         while time.monotonic()<deadline and not self.stop_hunt_event.is_set():
             if self._battle_menu_ready():
@@ -218,7 +226,16 @@ class BackendWorker(QThread):
             if not self._is_in_battle():
                 self._sleep(.12)
                 continue
-            self._sleep(.10)
+
+            now=time.monotonic()
+            if now>=next_clear:
+                self.bot.click("B")
+                next_clear=now+.45
+                if not self._sleep(.12):
+                    return False
+            else:
+                if not self._sleep(.08):
+                    return False
         return self._battle_menu_ready()
 
     def _menu_move(self, x, y, label, hold=.12):
@@ -359,14 +376,13 @@ class BackendWorker(QThread):
         self.status.emit({"state":"CAPTURE","message":f"Auto Capture: {label} — preparing Poké Ball slot {ball_slot}…"})
         deadline=time.monotonic()+45
         # A wild encounter first shows the "Wild <Pokémon> appeared!"
-        # message. That is not the command menu yet. Advance that message
-        # exactly once before waiting for the command menu. Never press A if
-        # the battle-menu flag already says the menu is ready, because in that
-        # state A would select FIGHT.
+        # message. Advance it once, then let _wait_battle_menu() actively clear
+        # any remaining battle text with B. This avoids the previous deadlock
+        # where the code only polled RAM after the initial A press.
         if not self._battle_menu_ready():
             self.status.emit({"state":"CAPTURE_WAIT","message":"Auto Capture: dismissing encounter message…"})
             self.bot.click("A")
-            if not self._sleep(.70): return False
+            if not self._sleep(.25): return False
         for throw in range(1,max_throws+1):
             if self.stop_hunt_event.is_set(): return False
             if not self._wait_battle_menu(timeout=max(1.0,deadline-time.monotonic()),label="Auto Capture"):
