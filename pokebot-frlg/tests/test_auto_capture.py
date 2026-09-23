@@ -23,3 +23,11 @@ def test_shiny_action_defaults_to_home():
     section = src[src.index("def _shiny_action"):src.index("def _hunt_loop")]
     assert 'options.get("shiny_auto_capture",False)' in section
     assert 'self._shiny_home(label,attempt,suffix)' in section
+
+
+def test_battle_menu_wait_clears_encounter_text_with_b(monkeypatch):
+    from pathlib import Path
+    src = Path(__file__).parents[1].joinpath("pokebot_frlg", "backend.py").read_text()
+    section = src[src.index("def _wait_battle_menu"):src.index("def _menu_move")]
+    assert 'self.bot.click("B")' in section
+    assert 'next_clear=now+.45' in section
