@@ -1,0 +1,789 @@
+{
+  "app": "PokebotSwitch-FRLG UI v0.17 RNG Controls Tab",
+  "timestamp": "2026-09-23T23:30:51",
+  "phase": "auto_capture_test",
+  "game": "FireRed",
+  "error": {
+    "type": "RuntimeError",
+    "message": "Auto Capture Test could not verify Pidgey in the party after capture",
+    "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\roger\\Desktop\\pokebot-frlg\\pokebot_frlg\\backend.py\", line 645, in _hunt_loop\n    fn(h,options)\n    ~~^^^^^^^^^^^\n  File \"C:\\Users\\roger\\Desktop\\pokebot-frlg\\pokebot_frlg\\backend.py\", line 969, in _run_auto_capture_test\n    raise RuntimeError(f\"Auto Capture Test could not verify {species_name(p.species)} in the party after capture\")\nRuntimeError: Auto Capture Test could not verify Pidgey in the party after capture\n"
+  },
+  "command_log": [
+    {
+      "t": 1790202638.225,
+      "command": "getTitleID"
+    },
+    {
+      "t": 1790202638.235,
+      "command": "game version"
+    },
+    {
+      "t": 1790202638.247,
+      "command": "getVersion"
+    },
+    {
+      "t": 1790202638.254,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790202638.268,
+      "command": "peek 0x120C2E4 80"
+    },
+    {
+      "t": 1790202638.28,
+      "command": "peek 0x120C348 80"
+    },
+    {
+      "t": 1790202638.291,
+      "command": "peek 0x120C3AC 80"
+    },
+    {
+      "t": 1790202638.315,
+      "command": "peek 0x120C410 80"
+    },
+    {
+      "t": 1790202638.325,
+      "command": "peek 0x120C474 80"
+    },
+    {
+      "t": 1790202638.334,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790202638.345,
+      "command": "peek 0x120E568 1"
+    },
+    {
+      "t": 1790202638.36,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790202638.376,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790202638.392,
+      "command": "peek 0x120E568 1"
+    },
+    {
+      "t": 1790202638.407,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790202638.949,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790202638.958,
+      "command": "peek 0x120E568 1"
+    },
+    {
+      "t": 1790202638.967,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790202639.156,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790202639.168,
+      "command": "peek 0x120C2E4 80"
+    },
+    {
+      "t": 1790202639.179,
+      "command": "peek 0x120C348 80"
+    },
+    {
+      "t": 1790202639.189,
+      "command": "peek 0x120C3AC 80"
+    },
+    {
+      "t": 1790202639.2,
+      "command": "peek 0x120C410 80"
+    },
+    {
+      "t": 1790202639.211,
+      "command": "peek 0x120C474 80"
+    },
+    {
+      "t": 1790202639.221,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790202639.237,
+      "command": "peek 0x120E568 1"
+    },
+    {
+      "t": 1790202639.252,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790202639.489,
+      "command": "detachController"
+    },
+    {
+      "t": 1790202640.24,
+      "command": "setStick LEFT 0 0"
+    },
+    {
+      "t": 1790202640.241,
+      "command": "setStick RIGHT 0 0"
+    },
+    {
+      "t": 1790202640.491,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790202640.501,
+      "command": "peek 0x120C2E4 80"
+    },
+    {
+      "t": 1790202640.51,
+      "command": "peek 0x120C348 80"
+    },
+    {
+      "t": 1790202640.52,
+      "command": "peek 0x120C3AC 80"
+    },
+    {
+      "t": 1790202640.53,
+      "command": "peek 0x120C410 80"
+    },
+    {
+      "t": 1790202640.539,
+      "command": "peek 0x120C474 80"
+    },
+    {
+      "t": 1790202640.549,
+      "command": "setStick LEFT 0 0"
+    },
+    {
+      "t": 1790202640.55,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202640.666,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202640.674,
+      "command": "setStick LEFT 0 32767"
+    },
+    {
+      "t": 1790202640.705,
+      "command": "setStick LEFT 0 0"
+    },
+    {
+      "t": 1790202640.761,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202640.79,
+      "command": "setStick LEFT 32767 0"
+    },
+    {
+      "t": 1790202640.822,
+      "command": "setStick LEFT 0 0"
+    },
+    {
+      "t": 1790202640.878,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202640.906,
+      "command": "setStick LEFT 0 -32768"
+    },
+    {
+      "t": 1790202640.937,
+      "command": "setStick LEFT 0 0"
+    },
+    {
+      "t": 1790202640.993,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202641.025,
+      "command": "setStick LEFT -32768 0"
+    },
+    {
+      "t": 1790202641.056,
+      "command": "setStick LEFT 0 0"
+    },
+    {
+      "t": 1790202641.112,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202641.142,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202641.15,
+      "command": "setStick LEFT 0 32767"
+    },
+    {
+      "t": 1790202641.181,
+      "command": "setStick LEFT 0 0"
+    },
+    {
+      "t": 1790202641.236,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202641.266,
+      "command": "setStick LEFT 32767 0"
+    },
+    {
+      "t": 1790202641.297,
+      "command": "setStick LEFT 0 0"
+    },
+    {
+      "t": 1790202641.353,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202641.381,
+      "command": "setStick LEFT 0 -32768"
+    },
+    {
+      "t": 1790202641.413,
+      "command": "setStick LEFT 0 0"
+    },
+    {
+      "t": 1790202641.469,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202641.498,
+      "command": "setStick LEFT -32768 0"
+    },
+    {
+      "t": 1790202641.529,
+      "command": "setStick LEFT 0 0"
+    },
+    {
+      "t": 1790202641.585,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202641.617,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202641.625,
+      "command": "setStick LEFT 0 32767"
+    },
+    {
+      "t": 1790202641.656,
+      "command": "setStick LEFT 0 0"
+    },
+    {
+      "t": 1790202641.712,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202641.742,
+      "command": "setStick LEFT 32767 0"
+    },
+    {
+      "t": 1790202641.773,
+      "command": "setStick LEFT 0 0"
+    },
+    {
+      "t": 1790202641.829,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202641.864,
+      "command": "setStick LEFT 0 -32768"
+    },
+    {
+      "t": 1790202641.895,
+      "command": "setStick LEFT 0 0"
+    },
+    {
+      "t": 1790202641.951,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202641.982,
+      "command": "setStick LEFT -32768 0"
+    },
+    {
+      "t": 1790202642.014,
+      "command": "setStick LEFT 0 0"
+    },
+    {
+      "t": 1790202642.069,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202642.099,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202642.107,
+      "command": "setStick LEFT 0 32767"
+    },
+    {
+      "t": 1790202642.138,
+      "command": "setStick LEFT 0 0"
+    },
+    {
+      "t": 1790202642.194,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202642.224,
+      "command": "setStick LEFT 32767 0"
+    },
+    {
+      "t": 1790202642.255,
+      "command": "setStick LEFT 0 0"
+    },
+    {
+      "t": 1790202642.311,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202642.34,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202642.349,
+      "command": "setStick LEFT 0 0"
+    },
+    {
+      "t": 1790202642.35,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202644.266,
+      "command": "peek 0x120C028 80"
+    },
+    {
+      "t": 1790202644.333,
+      "command": "peek 0xBD68D2D0 4"
+    },
+    {
+      "t": 1790202644.353,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790202644.369,
+      "command": "peek 0x120C2E4 80"
+    },
+    {
+      "t": 1790202644.384,
+      "command": "peek 0x120C348 80"
+    },
+    {
+      "t": 1790202644.401,
+      "command": "peek 0x120C3AC 80"
+    },
+    {
+      "t": 1790202644.417,
+      "command": "peek 0x120C410 80"
+    },
+    {
+      "t": 1790202644.433,
+      "command": "peek 0x120C474 80"
+    },
+    {
+      "t": 1790202644.449,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202644.464,
+      "command": "click A"
+    },
+    {
+      "t": 1790202644.715,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202644.736,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202644.747,
+      "command": "click B"
+    },
+    {
+      "t": 1790202644.868,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202644.878,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202644.974,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202644.983,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202645.073,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202645.084,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202645.173,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202645.183,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202645.271,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202645.282,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202645.29,
+      "command": "click B"
+    },
+    {
+      "t": 1790202645.41,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202645.426,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202645.515,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202645.524,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202645.614,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202645.623,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202645.714,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202645.723,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202645.814,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202645.823,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202645.833,
+      "command": "click B"
+    },
+    {
+      "t": 1790202645.954,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202645.963,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202646.054,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202646.064,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202646.154,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202646.165,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202646.255,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202646.265,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202646.356,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202646.372,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202646.383,
+      "command": "click B"
+    },
+    {
+      "t": 1790202646.504,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202646.515,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202646.604,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202646.615,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202646.705,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202646.716,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202646.806,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202646.817,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202646.906,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202646.925,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202646.934,
+      "command": "click B"
+    },
+    {
+      "t": 1790202647.056,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202647.065,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202647.155,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202647.166,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202647.255,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202647.265,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202647.356,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202647.366,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202647.459,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202647.469,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202647.478,
+      "command": "click B"
+    },
+    {
+      "t": 1790202647.599,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202647.608,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202647.698,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202647.709,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202647.798,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202647.809,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202647.898,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202647.908,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202648.005,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202648.016,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202648.025,
+      "command": "click B"
+    },
+    {
+      "t": 1790202648.146,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202648.155,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202648.246,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202648.256,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202648.346,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202648.356,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202648.445,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202648.455,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202648.547,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202648.555,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202648.565,
+      "command": "click B"
+    },
+    {
+      "t": 1790202648.686,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790202648.697,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202648.706,
+      "command": "setStick LEFT 32767 0"
+    },
+    {
+      "t": 1790202648.828,
+      "command": "setStick LEFT 0 0"
+    },
+    {
+      "t": 1790202648.99,
+      "command": "click A"
+    },
+    {
+      "t": 1790202649.641,
+      "command": "click DRIGHT"
+    },
+    {
+      "t": 1790202649.823,
+      "command": "click DRIGHT"
+    },
+    {
+      "t": 1790202650.004,
+      "command": "click A"
+    },
+    {
+      "t": 1790202650.455,
+      "command": "click A"
+    },
+    {
+      "t": 1790202650.708,
+      "command": "click A"
+    },
+    {
+      "t": 1790202650.709,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790202651.825,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790202651.835,
+      "command": "peek 0x120C2E4 80"
+    },
+    {
+      "t": 1790202651.843,
+      "command": "peek 0x120C348 80"
+    },
+    {
+      "t": 1790202651.853,
+      "command": "peek 0x120C3AC 80"
+    },
+    {
+      "t": 1790202651.862,
+      "command": "peek 0x120C410 80"
+    },
+    {
+      "t": 1790202651.871,
+      "command": "peek 0x120C474 80"
+    }
+  ]
+}
