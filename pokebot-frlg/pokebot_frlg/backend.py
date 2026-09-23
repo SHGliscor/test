@@ -397,12 +397,15 @@ class BackendWorker(QThread):
                 raise RuntimeError("Could not move to BAG in the battle menu")
             self.bot.click("A"); self._sleep(.65)
 
-            # FRLG Bag pockets are Items -> Key Items -> Poké Balls.
-            self.status.emit({"state":"CAPTURE_MENU","message":"Auto Capture: switching to Poké Balls pocket…"})
-            if not self._menu_move(0x7FFF,0,"Auto Capture: next Bag pocket"):
-                raise RuntimeError("Could not switch Bag pocket")
-            if not self._menu_move(0x7FFF,0,"Auto Capture: Poké Balls pocket"):
-                raise RuntimeError("Could not select Poké Balls pocket")
+            # The Bag opens on the Items pocket. The JSON hardware log shows
+            # the Poké Ball pocket is reached with two D-pad RIGHT presses
+            # from this starting pocket. Use D-pad here; left-stick movement
+            # is only for the battle command grid.
+            self.status.emit({"state":"CAPTURE_MENU","message":"Auto Capture: moving to Poké Balls pocket (RIGHT x2)…"})
+            for _ in range(2):
+                self.bot.click("DRIGHT")
+                if not self._sleep(.18):
+                    return False
             self.bot.click("A"); self._sleep(.45)
 
             # Select the configured listed ball. We deliberately use DOWN, not
