@@ -1148,7 +1148,8 @@ class BackendWorker(QThread):
             if self._encounter(p,attempt,"Wild encounter",rng_context="wild"):
                 self._shiny_action(species_name(p.species),attempt,options); return
             if bool(options.get("auto_capture", False)):
-                if self._auto_capture(options, species_name(p.species)):
+                capture_options=dict(options, _capture_species_id=int(p.species))
+                if self._auto_capture(capture_options, species_name(p.species)):
                     return
             else:
                 if not self._escape_battle(): return
