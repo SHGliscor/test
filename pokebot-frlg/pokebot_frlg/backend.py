@@ -403,13 +403,18 @@ class BackendWorker(QThread):
                 # screen. If the species was already registered, A may briefly
                 # open the nickname input; the following B cancels that input
                 # and the subsequent B declines the nickname normally.
-                if not self._sleep(.45):
+                # Give the newly registered Pokédex screen time to finish
+                # loading before sending the required A.  The sequence is
+                # specifically: Pokédex screen -> A -> nickname screen -> B.
+                if not self._sleep(.90):
                     return False
+                self.status.emit({"state":"CAPTURE_RESULT","message":f"Auto Capture: advancing {species_name(species)} Pokédex entry…"})
                 self.bot.click("A")
-                if not self._sleep(.70):
+                if not self._sleep(.90):
                     return False
+                self.status.emit({"state":"CAPTURE_RESULT","message":"Auto Capture: declining nickname…"})
                 self.bot.click("B")
-                if not self._sleep(.25):
+                if not self._sleep(.45):
                     return False
                 break
             if not self._sleep(.10):
