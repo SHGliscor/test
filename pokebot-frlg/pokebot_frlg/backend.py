@@ -473,9 +473,11 @@ class BackendWorker(QThread):
                 raise RuntimeError("Could not move to BAG in the battle menu")
             self.bot.click("A"); self._sleep(.65)
 
-            # The Bag remembers the last pocket/cursor position. Do not
-            # assume that it is already on Poké Balls: explicitly move to the
-            # Poké Balls pocket, then select the configured ball.
+            # FRLG remembers both the last Bag pocket and the last cursor
+            # position. After a failed throw the cursor can therefore reopen
+            # on the ball used by the previous attempt. The configured
+            # capture_ball_slot is an absolute slot from the top of the
+            # Poké Balls list, not "move down again from the current cursor".
             self.status.emit({"state":"CAPTURE_MENU","message":"Auto Capture: opening Poké Balls pocket…"})
             if not self._sleep(.80):
                 return False
@@ -485,6 +487,16 @@ class BackendWorker(QThread):
                     return False
             if not self._sleep(.50):
                 return False
+
+            # Normalize the Poké Balls cursor to the top before applying the
+            # configured slot. DUP is safe at the top boundary and, unlike
+            # repeated DDOWN, makes retries deterministic when FRLG restores
+            # the previous ball cursor.
+            self.status.emit({"state":"CAPTURE_MENU","message":"Auto Capture: resetting Poké Ball cursor…"})
+            for index in range(6):
+                self.bot.click("DUP")
+                if not self._sleep(.18):
+                    return False
 
             self.status.emit({"state":"CAPTURE_MENU","message":f"Auto Capture: selecting ball slot {ball_slot}…"})
             for index in range(ball_slot-1):
