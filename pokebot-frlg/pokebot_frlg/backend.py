@@ -419,46 +419,64 @@ class BackendWorker(QThread):
                     self.status.emit({"state":"CAPTURE_RESULT","message":f"Capture probe: Pokedex registration NO — {species_name(species)} was already registered."})
                 else:
                     self.log.emit(f"CAPTURE PROBE: Pokedex ownership could not be classified (before={pokedex_owned_before!r}, after={dex_after!r})")
-                # A newly registered species enters FRLG's Pokédex display
-                # before the nickname prompt. That screen needs an explicit
-                # advance; B alone can leave Auto Capture parked on the Dex
-                # screen. If the species was already registered, A may briefly
-                # open the nickname input; the following B cancels that input
-                # and the subsequent B declines the nickname normally.
-                # FRLG post-capture text is a three-A sequence when a new
-                # species is added to the Pokedex:
+                # FireRed's actual post-capture script branches here:
                 #
-                #   A -> "Gotcha! <Pokemon> was caught!"
-                #   A -> "<Pokemon> data was added to the Pokedex."
-                #   A -> clear the Pokedex entry
-                #   B -> decline the nickname
+                #   Gotcha message
+                #       -> if NEW Dex entry:
+                #            "data was added to the Pokedex"
+                #            -> display Dex entry
+                #            -> nickname prompt
+                #       -> if ALREADY registered:
+                #            nickname prompt directly
                 #
-                # The first A timing is already hardware-proven in the current
-                # build, so keep that timing unchanged. The bug was that the
-                # flow only sent this first post-capture A and then sent B,
-                # leaving the bot parked on the Pokedex entry.
+                # The old implementation always sent three A presses. That
+                # was incorrect for already-registered species, and the final
+                # A could also arrive before the Dex display had finished
+                # opening on Switch, leaving the bot parked on the entry.
+                #
+                # Match the real FRLG script: one A for the Gotcha message,
+                # and only perform the additional Dex A presses when the
+                # species was confirmed as newly registered.
                 if not self._sleep(2.25):
                     return False
                 self.status.emit({"state":"CAPTURE_RESULT","message":f"Auto Capture: advancing catch message for {species_name(species)}…"})
                 self.bot.click("A")
 
-                # Advance the "data was added to the Pokedex" message.
-                if not self._sleep(1.75):
-                    return False
-                self.status.emit({"state":"CAPTURE_RESULT","message":"Auto Capture: advancing Pokedex registration message…"})
-                self.bot.click("A")
+                if pokedex_owned_before is False:
+                    # Advance the "data was added to the Pokedex" message.
+                    if not self._sleep(1.75):
+                        return False
+                    self.status.emit({"state":"CAPTURE_RESULT","message":"Auto Capture: advancing Pokedex registration message…"})
+                    self.bot.click("A")
 
-                # Clear the actual Pokedex entry before the nickname prompt.
-                if not self._sleep(1.75):
-                    return False
-                self.status.emit({"state":"CAPTURE_RESULT","message":"Auto Capture: clearing Pokedex entry…"})
-                self.bot.click("A")
+                    # The Dex display is a separate asynchronous screen. Give
+                    # it time to fully open before sending the input that
+                    # closes it. This is intentionally longer than the old
+                    # 1.75s fixed delay because the third A was being sent too
+                    # early on hardware.
+                    if not self._sleep(3.50):
+                        return False
+                    self.status.emit({"state":"CAPTURE_RESULT","message":"Auto Capture: closing completed Pokedex entry…"})
+                    self.bot.click("A")
 
-                # The game now asks whether to give the Pokemon a nickname.
-                if not self._sleep(1.00):
-                    return False
+                    # Allow the nickname prompt to finish opening before B.
+                    if not self._sleep(1.50):
+                        return False
+                elif pokedex_owned_before is True:
+                    # No Dex display is shown for an already-registered
+                    # species; the next script stage is the nickname prompt.
+                    if not self._sleep(1.50):
+                        return False
+                else:
+                    # If Dex ownership could not be read, avoid blindly sending
+                    # another A. B is the safer non-selecting input while the
+                    # post-capture dialogue settles.
+                    self.log.emit("CAPTURE FLOW: Dex ownership unknown; skipping additional Dex A presses")
+                    if not self._sleep(1.50):
+                        return False
+
                 self.status.emit({"state":"CAPTURE_RESULT","message":"Capture flow: nickname prompt — selecting NO…"})
-                self.log.emit("CAPTURE PROBE: nickname prompt reached; selecting NO with B")
+                self.log.emit("CAPTURE FLOW: nickname stage — selecting NO with B")
                 self.bot.click("B")
                 if not self._sleep(1.00):
                     return False
