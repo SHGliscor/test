@@ -109,7 +109,8 @@ class MainWindow(QMainWindow):
         form=QFormLayout()
         self.movement_mode=QComboBox()
         self.movement_mode.addItem("Wiggle — walk back and forth","wiggle")
-        self.movement_mode.addItem("Spin — rotate on one tile","spin")
+        self.movement_mode.addItem("Spin — rotate on one tile (Analog)","spin")
+        self.movement_mode.addItem("Spin — rotate on one tile (D-Pad)","spin_dpad")
         self.movement_mode.currentIndexChanged.connect(self._movement_changed)
         form.addRow("Movement mode",self.movement_mode)
         self.spin_hold=QDoubleSpinBox(); self.spin_hold.setRange(.02,.20); self.spin_hold.setSingleStep(.005); self.spin_hold.setDecimals(3); self.spin_hold.setValue(.045); self.spin_hold.setSuffix(" s")
@@ -579,7 +580,7 @@ class MainWindow(QMainWindow):
         self._hunt_changed()
 
     def _movement_changed(self,*_):
-        spin=self.movement_mode.currentData()=="spin"
+        spin=self.movement_mode.currentData() in ("spin","spin_dpad")
         self.spin_hold.setEnabled(spin and not self.hunting)
         self.spin_settle.setEnabled(spin and not self.hunting)
         self.movement_mode.setEnabled(not self.hunting)
