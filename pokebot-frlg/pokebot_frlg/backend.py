@@ -1147,7 +1147,10 @@ class BackendWorker(QThread):
             return
         self.status.emit({"state":"TESTING","message":f"Non-shiny {species_name(p.species)} confirmed — starting Auto Capture."})
         before=self._party_slots()
-        if not self._auto_capture(options,species_name(p.species)):
+        # _auto_capture requires the live wild species ID so a successful
+        # capture can be verified independently of the display label.
+        capture_options=dict(options, _capture_species_id=int(p.species))
+        if not self._auto_capture(capture_options,species_name(p.species)):
             return
         after=self._party_slots()
         caught=[x for x in after if x.valid and not x.is_egg and int(x.species)==int(p.species) and not x.shiny]
