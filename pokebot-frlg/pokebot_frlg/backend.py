@@ -367,7 +367,20 @@ class BackendWorker(QThread):
             return False
         return not self._oak_targets or species in self._oak_targets
 
-    def _finish_caught_pokemon(self, species, baseline_party, timeout=12.0):
+    def _read_pokedex_owned(self, species):
+        """Read the FRLG SaveBlock2 Pokedex owned bit for one species."""
+        try:
+            base=self._save_ptr(SMALL_SHIFT)
+            if not base or not (1 <= int(species) <= 386):
+                return None
+            index=int(species)-1
+            raw=self.bot.read_heap(base+0x18+0x10+(index//8),1)[0]
+            return bool(raw & (1 << (index%8)))
+        except Exception as exc:
+            self.log.emit(f"Pokedex ownership probe unavailable: {exc}")
+            return None
+
+    def _finish_caught_pokemon(self, species, baseline_party, timeout=12.0, pokedex_owned_before=None):
         """Finish FRLG's post-capture script without blind A-button spam.
 
         FireRed's catch script first records the catch, optionally displays the
@@ -396,7 +409,16 @@ class BackendWorker(QThread):
                         caught=p
                         break
             if caught is not None:
-                self.status.emit({"state":"CAPTURE_RESULT","message":f"Auto Capture: {species_name(species)} confirmed in party; finishing Pokédex/nickname flow…"})
+                self.status.emit({"state":"CAPTURE_RESULT","message":f"Auto Capture: {species_name(species)} confirmed in party; probing Pokedex/nickname flow…"})
+                dex_after=self._read_pokedex_owned(species)
+                if pokedex_owned_before is False and dex_after is True:
+                    self.log.emit(f"CAPTURE PROBE: Pokedex registration YES for {species_name(species)}")
+                    self.status.emit({"state":"CAPTURE_RESULT","message":f"Capture probe: Pokedex registration YES — {species_name(species)} was newly registered."})
+                elif pokedex_owned_before is True:
+                    self.log.emit(f"CAPTURE PROBE: Pokedex registration NO for {species_name(species)} (already registered)")
+                    self.status.emit({"state":"CAPTURE_RESULT","message":f"Capture probe: Pokedex registration NO — {species_name(species)} was already registered."})
+                else:
+                    self.log.emit(f"CAPTURE PROBE: Pokedex ownership could not be classified (before={pokedex_owned_before!r}, after={dex_after!r})")
                 # A newly registered species enters FRLG's Pokédex display
                 # before the nickname prompt. That screen needs an explicit
                 # advance; B alone can leave Auto Capture parked on the Dex
@@ -415,7 +437,8 @@ class BackendWorker(QThread):
                 self.bot.click("A")
                 if not self._sleep(1.75):
                     return False
-                self.status.emit({"state":"CAPTURE_RESULT","message":"Auto Capture: declining nickname…"})
+                self.status.emit({"state":"CAPTURE_RESULT","message":"Capture probe: nickname prompt — selecting NO…"})
+                self.log.emit("CAPTURE PROBE: nickname prompt YES; selecting NO with B")
                 self.bot.click("B")
                 if not self._sleep(1.00):
                     return False
@@ -451,14 +474,16 @@ class BackendWorker(QThread):
             raise RuntimeError("Auto Capture post-catch sequence did not return to a stable overworld")
 
         self.party.emit(self._read_party())
+        self.log.emit(f"CAPTURE PROBE: stable overworld YES after capture -> Pokedex -> nickname NO for {species_name(species)}")
         if caught is not None:
-            self.status.emit({"state":"CAPTURED","message":f"Auto Capture complete: {species_name(species)} caught; Pokédex/nickname flow finished."})
+            self.status.emit({"state":"CAPTURED","message":f"Auto Capture complete: {species_name(species)} — capture -> Pokedex -> nickname NO -> overworld verified."})
             return True
 
         # No party delta is expected when the party was already full.  The
         # successful catch has nevertheless reached the post-capture script and
         # returned cleanly to the overworld.
-        self.status.emit({"state":"CAPTURED","message":f"Auto Capture complete: {species_name(species)} caught; post-capture flow finished."})
+        self.log.emit(f"CAPTURE PROBE: stable overworld YES after full-party capture flow for {species_name(species)}")
+        self.status.emit({"state":"CAPTURED","message":f"Auto Capture complete: {species_name(species)} — capture -> Pokedex -> nickname NO -> overworld verified."})
         return True
 
     def _auto_capture(self, options, label):
@@ -470,6 +495,13 @@ class BackendWorker(QThread):
         self.status.emit({"state":"CAPTURE","message":f"Auto Capture: {label} — preparing Poké Ball slot {ball_slot}…"})
         deadline=time.monotonic()+45
         baseline_party=self._party_slots()
+        pokedex_owned_before=self._read_pokedex_owned(capture_species)
+        if pokedex_owned_before is True:
+            self.log.emit(f"CAPTURE PROBE: {label} already registered in Pokedex before capture")
+        elif pokedex_owned_before is False:
+            self.log.emit(f"CAPTURE PROBE: {label} not registered in Pokedex before capture")
+        else:
+            self.log.emit(f"CAPTURE PROBE: Pokedex state unavailable before capturing {label}")
         # The caller passes the current wild species so post-capture verification
         # never relies on the display label.
         capture_species=int(options.get("_capture_species_id",0) or 0)
@@ -584,7 +616,7 @@ class BackendWorker(QThread):
 
                     if caught_delta or stable_out>=5:
                         self.status.emit({"state":"CAPTURE_RESULT","message":f"Auto Capture: throw {throw} ended the battle; handling post-capture flow…"})
-                        return self._finish_caught_pokemon(capture_species, baseline_party, timeout=max(2.0,deadline-time.monotonic()))
+                        return self._finish_caught_pokemon(capture_species, baseline_party, timeout=max(2.0,deadline-time.monotonic()), pokedex_owned_before=pokedex_owned_before)
 
                     # Battle state came back after a transient clear: this was
                     # not a completed capture. Continue waiting for the battle
