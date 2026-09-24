@@ -889,30 +889,15 @@ class BackendWorker(QThread):
         self.bot.set_stick("LEFT",0,0)
         return self._sleep(settle)
 
-    def _spin_to_battle(self, hold=.017, settle=.017):
-        """Reproduce 40Cakes' Gen3 Spin timing on the Switch wrapper.
+    def _spin_to_battle(self, hold=.045, settle=.055):
+        """Rotate in place using the same proven left-stick transport as Wiggle.
 
-        40Cakes does not hold a direction for a normal movement interval.
-        Its mGBA implementation presses one cardinal direction for exactly
-        one emulated frame, then the next frame has no directional input.
-        It only sends the next direction when the avatar is already standing
-        still. That is what lets FRLG rotate on one tile.
-
-        Sending individual setStick commands through Koi is not equivalent:
-        botbase schedules each command independently, so even a 12 ms Python
-        sleep can leave the stick held long enough to move a tile. Koi's
-        clickSeq command executes the stick changes and waits inside the
-        sysmodule, avoiding that scheduling gap.
-
-        We therefore send exactly one directional frame followed by one
-        neutral frame per spin step, then check battle RAM before continuing.
+        The previous implementation used Koi clickSeq. On hardware that path
+        produced no movement at all, while the setStick path used by Wiggle
+        works reliably. Keep Spin on that known-good transport and use short
+        pulses so the avatar can turn without being driven across a tile.
         """
         self.bot.set_stick("LEFT", 0, 0)
-
-        # FRLG runs at roughly 60 Hz.  17 ms is one game frame and mirrors
-        # 40Cakes/libmgba's press_button -> run_single_frame behaviour.
-        frame_ms=max(15,min(20,round(float(hold)*1000)))
-        neutral_ms=max(15,min(20,round(float(settle)*1000)))
         magnitude=0x7FFF
         directions=(
             (0, magnitude),       # Up
@@ -920,26 +905,24 @@ class BackendWorker(QThread):
             (0, -magnitude),      # Down
             (-magnitude, 0),      # Left
         )
+        pulse=max(.030,min(.070,float(hold)))
+        gap=max(.035,min(.090,float(settle)))
 
         while not self.stop_hunt_event.is_set() and not self._is_in_battle():
             for x, y in directions:
                 if self.stop_hunt_event.is_set() or self._is_in_battle():
                     break
 
-                # One direction frame, then one neutral frame.  Keep this as
-                # one clickSeq transaction so Koi's main-loop command delay
-                # cannot stretch the directional hold.
-                seq=(
-                    f"%{x},{y},W{frame_ms},%0,0,W{neutral_ms}"
-                )
-                self.bot.click_sequence(seq)
-
-                # clickSeq is synchronous: once it returns the one-frame
-                # directional input has been released and the neutral frame
-                # has elapsed.
-                if self.stop_hunt_event.is_set():
+                # Use the exact same controller API as the working Wiggle
+                # routine. Do not use clickSeq here.
+                self.bot.set_stick("LEFT", x, y)
+                if not self._sleep(pulse):
                     self.bot.set_stick("LEFT", 0, 0)
                     return False
+                self.bot.set_stick("LEFT", 0, 0)
+                if not self._sleep(gap):
+                    return False
+
                 if self._is_in_battle():
                     break
 
