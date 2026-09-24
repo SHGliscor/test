@@ -1695,21 +1695,10 @@ class BackendWorker(QThread):
             self.log.emit(f"Manual support ZIP failed: {exc}")
 
     def _fail(self,exc,phase):
-        """Create exactly one diagnostic ZIP for a genuine failure.
+        """Record a failure without creating a support ZIP.
 
-        The JSON report lives inside the ZIP; no duplicate loose JSON file is
-        left in AppData. Normal stops never call this function.
+        Support packages are intentionally manual now.  They are created only
+        when the user explicitly presses Export Support ZIP on the Testing /
+        Support page, so routine failures cannot fill AppData with archives.
         """
         self.log.emit(f"{type(exc).__name__}: {exc}")
-        try:
-            root=appdata_root()/"support"
-            root.mkdir(parents=True,exist_ok=True)
-            stamp=datetime.now().strftime("%Y%m%d_%H%M%S")
-            zp=root/f"PokebotSwitch_FRLG_support_{stamp}.zip"
-            rec={"app":"PokebotSwitch-FRLG UI v0.17 RNG Controls Tab","timestamp":datetime.now().isoformat(timespec="seconds"),"phase":phase,
-                 "game":self.current_game,"error":{"type":type(exc).__name__,"message":str(exc),"traceback":traceback.format_exc()},"command_log":list(self.bot.command_log) if self.bot else []}
-            with zipfile.ZipFile(zp,"w",zipfile.ZIP_DEFLATED) as z:
-                z.writestr(f"PokebotSwitch_FRLG_UI_{stamp}.json",json.dumps(rec,indent=2))
-            self.support.emit(str(zp))
-        except Exception:
-            pass
