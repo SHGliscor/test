@@ -1350,7 +1350,7 @@ class BackendWorker(QThread):
             self.bot.click("B"); self._sleep(.20)
         if self.stop_hunt_event.is_set(): return False
         if not self._battle_menu_ready(): raise RuntimeError("Battle menu did not become ready for Run")
-        # Give the send-out animation/menu transition a little extra time\n        # to finish before the first D-pad input.\n        if not self._sleep(.35): return False\n        # Battle command grid:
+        # Give the send-out animation/menu transition a little extra time\n        # to finish before the first D-pad input.\n        if not self._sleep(1.20): return False\n        # Battle command grid:
         #   Fight | Bag
         #   PKMN  | Run
         #
