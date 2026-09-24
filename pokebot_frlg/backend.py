@@ -1350,7 +1350,13 @@ class BackendWorker(QThread):
             self.bot.click("B"); self._sleep(.20)
         if self.stop_hunt_event.is_set(): return False
         if not self._battle_menu_ready(): raise RuntimeError("Battle menu did not become ready for Run")
-        # Give the send-out animation/menu transition a little extra time\n        # to finish before the first D-pad input.\n        if not self._sleep(1.50): return False\n        # Battle command grid:
+        # Give the send-out animation/menu transition a little extra time
+        # to finish before the first D-pad input.
+        self.log.emit("RUN DEBUG: battle menu ready")
+        self.log.emit("RUN DEBUG: pre-DDOWN wait START (1.50s)")
+        if not self._sleep(1.50): return False
+        self.log.emit("RUN DEBUG: pre-DDOWN wait END")
+        # Battle command grid:
         #   Fight | Bag
         #   PKMN  | Run
         #
@@ -1359,9 +1365,13 @@ class BackendWorker(QThread):
         # DOWN -> RIGHT.  If DOWN is accepted, the cursor is on PKMN;
         # RIGHT then moves directly to Run.
         self.status.emit({"state":"RUNNING","message":"Selecting Run (DOWN, RIGHT)…"})
+        self.log.emit("RUN DEBUG: sending DDOWN")
         self.bot.click("DDOWN")
+        self.log.emit("RUN DEBUG: DDOWN sent")
         if not self._sleep(.80): return False
+        self.log.emit("RUN DEBUG: sending DRIGHT")
         self.bot.click("DRIGHT")
+        self.log.emit("RUN DEBUG: DRIGHT sent")
         if not self._sleep(.60): return False
         deadline=time.monotonic()+15
         while time.monotonic()<deadline and not self.stop_hunt_event.is_set() and self._is_in_battle():
