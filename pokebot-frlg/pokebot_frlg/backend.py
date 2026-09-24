@@ -972,20 +972,19 @@ class BackendWorker(QThread):
             self.bot.click("B"); self._sleep(.20)
         if self.stop_hunt_event.is_set(): return False
         if not self._battle_menu_ready(): raise RuntimeError("Battle menu did not become ready for Run")
-        # Battle command grid is:
+        # Battle command grid:
         #   Fight | Bag
         #   PKMN  | Run
         #
-        # Do not use the analogue stick here.  The stick is intentionally
-        # used for overworld movement, but a short analogue pulse can be
-        # interpreted inconsistently by the FRLG battle cursor.  A missed
-        # DOWN leaves the cursor on Bag, which was causing Auto Capture's
-        # Run path to open the Bag instead.
-        self.status.emit({"state":"RUNNING","message":"Selecting Run (RIGHT, DOWN)…"})
-        self.bot.click("DRIGHT")
-        if not self._sleep(.30): return False
+        # Hardware testing showed RIGHT -> DOWN can leave the cursor on
+        # PKMN when the RIGHT click is missed.  Use the other route:
+        # DOWN -> RIGHT.  If DOWN is accepted, the cursor is on PKMN;
+        # RIGHT then moves directly to Run.
+        self.status.emit({"state":"RUNNING","message":"Selecting Run (DOWN, RIGHT)…"})
         self.bot.click("DDOWN")
-        if not self._sleep(.40): return False
+        if not self._sleep(.35): return False
+        self.bot.click("DRIGHT")
+        if not self._sleep(.45): return False
         deadline=time.monotonic()+15
         while time.monotonic()<deadline and not self.stop_hunt_event.is_set() and self._is_in_battle():
             self.bot.click("A"); self._sleep(.20)
