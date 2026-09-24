@@ -889,46 +889,35 @@ class BackendWorker(QThread):
         self.bot.set_stick("LEFT",0,0)
         return self._sleep(settle)
 
-    def _spin_to_battle(self, hold=.045, settle=.055):
-        """Search without deliberately walking a four-tile square.
+    def _spin_to_battle(self, hold=.012, settle=.012):
+        """Turn on the current tile without deliberately walking.
 
-        FRLG's Switch wrapper treats a full analogue direction as a real
-        movement input.  The old UP -> neutral -> RIGHT -> neutral -> DOWN
-        -> neutral -> LEFT pattern therefore gave the game four independent
-        chances to commit a tile movement; at a grass-edge that can carry the
-        player out of the patch even with very short timings.
+        The previous counter-steer experiment made the Switch wrapper much
+        worse because every opposite-stick command was still a real movement
+        input.  Gen3 Spin is a rapid sequence of direction changes on one
+        tile: each direction is released before the game's movement repeat
+        can advance to another tile.
 
-        Instead, reverse the stick directly before releasing it.  Each pair
-        is therefore a counter-steer: UP -> DOWN, then RIGHT -> LEFT.  There
-        is no neutral gap between the two opposing directions.  The stick is
-        only released after the counter-steer has completed.  This is the
-        closest controller-only equivalent to Gen3 "spin" available through
-        the current FRLG wrapper, and avoids intentionally tracing a square.
+        Koi's setStick command is send-only, so the useful unit here is the
+        actual time between stick updates.  Keep the directional pulse very
+        short and use a small analogue magnitude; the goal is to register
+        the facing change, not a full-strength walking command.
         """
         self.bot.set_stick("LEFT",0,0)
-        hold=max(.020,min(.080,float(hold)))
-        settle=max(.020,min(.080,float(settle)))
-        pairs=(
-            ((0,0x7FFF),(0,-0x8000)),
-            ((0x7FFF,0),(-0x8000,0)),
+        hold=max(.005,min(.100,float(hold)))
+        settle=max(.005,min(.100,float(settle)))
+        magnitude=0x4000
+        directions=(
+            (0,magnitude),       # UP
+            (magnitude,0),       # RIGHT
+            (0,-magnitude),      # DOWN
+            (-magnitude,0),      # LEFT
         )
         while not self.stop_hunt_event.is_set() and not self._is_in_battle():
-            for first, second in pairs:
+            for x,y in directions:
                 if self._is_in_battle() or self.stop_hunt_event.is_set():
                     break
-                self.bot.set_stick("LEFT",first[0],first[1])
-                if not self._sleep(hold):
-                    self.bot.set_stick("LEFT",0,0)
-                    return False
-                # Counter-steer without a neutral frame.  This is deliberate:
-                # the previous implementation's neutral interval was allowing
-                # every pulse to become a committed tile movement.
-                self.bot.set_stick("LEFT",second[0],second[1])
-                if not self._sleep(hold):
-                    self.bot.set_stick("LEFT",0,0)
-                    return False
-                self.bot.set_stick("LEFT",0,0)
-                if not self._sleep(settle):
+                if not self._stick_tap(x,y,hold=hold,settle=settle):
                     return False
         self.bot.set_stick("LEFT",0,0)
         if self._is_in_battle():
