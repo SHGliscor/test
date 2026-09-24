@@ -1325,48 +1325,38 @@ class BackendWorker(QThread):
             self.bot.click("B"); self._sleep(.20)
         if self.stop_hunt_event.is_set(): return False
         if not self._battle_menu_ready(): raise RuntimeError("Battle menu did not become ready for Run")
-        # Battle command grid:
-        #   Fight | Bag
-        #   PKMN  | Run
-        #
-        # IMPORTANT: non-auto-capture must never blindly send RIGHT then A.
-        # If a standalone DDOWN is lost, RIGHT leaves the cursor on Bag and
-        # the following A opens the Bag.  Koi clickSeq executes the complete
-        # DOWN -> RIGHT -> A path inside botbase, avoiding the normal
-        # inter-command scheduling gap that caused the missed directional
-        # input.  Keep the sequence isolated from Auto Capture.
+
         self.status.emit({"state":"RUNNING","message":"Selecting Run — DOWN then RIGHT…"})
-        # Do not use clickSeq here.  The hardware result showed that the
-        # atomic sequence was not producing the expected cursor movement.
-        # Send each direction as a normal controller click and verify the
-        # battle menu remains active before continuing.
+        # Select Run from the standard FRLG command grid.
         self.bot.click("DDOWN")
         if not self._sleep(.30): return False
         self.bot.click("DRIGHT")
         if not self._sleep(.45): return False
-
-        # A single A selects the current command.  Never retry A blindly:
-        # if either directional input was missed, A could select Bag/PKMN.
         if not self._battle_menu_ready():
             raise RuntimeError("Battle menu left command state while selecting Run")
+        # A #1 selects Run.
         self.bot.click("A")
-        if not self._sleep(.30): return False
 
+        # Wait for the escape-success message.  The second A is deliberately
+        # gated on leaving the battle command state so it cannot be mistaken
+        # for the Run-selection A.
         deadline=time.monotonic()+15
         while time.monotonic()<deadline and not self.stop_hunt_event.is_set():
             if not self._is_in_battle():
                 break
-            if not self._sleep(.20):
-                return False
-        if self._is_in_battle() and not self.stop_hunt_event.is_set():
+            if not self._sleep(.10): return False
+
+        if self.stop_hunt_event.is_set(): return False
+        if self._is_in_battle():
             raise RuntimeError("Run selection failed — battle is still active; no fallback menu input was sent")
 
-        # Battle RAM can clear slightly before FRLG has actually returned
-        # control to the overworld. Starting Spin immediately at that point
-        # can leak the first stick pulse into the post-battle transition and
-        # make the player walk one tile. Require the overworld state to be
-        # stable for several polls, with the stick held neutral throughout,
-        # before allowing the next hunt movement to start.
+        # FRLG leaves the "Got away safely!" text on screen until A is pressed.
+        # A #2 dismisses that message; do not proceed to movement before it.
+        self.status.emit({"state":"RUNNING","message":"Got away safely! — dismissing message…"})
+        self.bot.click("A")
+        if not self._sleep(.30): return False
+
+        # Require stable overworld control before the next hunt movement.
         self.bot.set_stick("LEFT",0,0)
         ready=0
         deadline=time.monotonic()+5.0
@@ -1379,7 +1369,7 @@ class BackendWorker(QThread):
                 ready=0
             if not self._sleep(.08): return False
         if ready<4:
-            raise RuntimeError("Overworld did not become stable after escaping the wild battle")
+            raise RuntimeError("Overworld did not become stable after dismissing the escape message")
         if not self._sleep(.30): return False
         self.bot.set_stick("LEFT",0,0)
         self._wild_horizontal = not self._wild_horizontal
