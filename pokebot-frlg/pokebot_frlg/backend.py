@@ -409,12 +409,23 @@ class BackendWorker(QThread):
                 if not self._sleep(.90):
                     return False
                 self.status.emit({"state":"CAPTURE_RESULT","message":f"Auto Capture: advancing {species_name(species)} Pokédex entry…"})
-                self.bot.click("A")
-                if not self._sleep(.90):
+                # Use an explicit A press/release rather than click A. The
+                # Pokédex registration screen can ignore a very short click
+                # while its display task is settling.
+                self.bot.press("A")
+                if not self._sleep(.18):
+                    self.bot.release("A")
+                    return False
+                self.bot.release("A")
+                if not self._sleep(1.50):
                     return False
                 self.status.emit({"state":"CAPTURE_RESULT","message":"Auto Capture: declining nickname…"})
-                self.bot.click("B")
-                if not self._sleep(.45):
+                self.bot.press("B")
+                if not self._sleep(.18):
+                    self.bot.release("B")
+                    return False
+                self.bot.release("B")
+                if not self._sleep(.60):
                     return False
                 break
             if not self._sleep(.10):
