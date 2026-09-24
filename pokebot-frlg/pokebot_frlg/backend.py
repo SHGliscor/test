@@ -997,7 +997,28 @@ class BackendWorker(QThread):
         while time.monotonic()<deadline and not self.stop_hunt_event.is_set() and self._is_in_battle():
             self.bot.click("A"); self._sleep(.20)
         if self._is_in_battle() and not self.stop_hunt_event.is_set(): raise RuntimeError("Could not escape the wild battle")
-        self._sleep(.80)
+
+        # Battle RAM can clear slightly before FRLG has actually returned
+        # control to the overworld. Starting Spin immediately at that point
+        # can leak the first stick pulse into the post-battle transition and
+        # make the player walk one tile. Require the overworld state to be
+        # stable for several polls, with the stick held neutral throughout,
+        # before allowing the next hunt movement to start.
+        self.bot.set_stick("LEFT",0,0)
+        ready=0
+        deadline=time.monotonic()+5.0
+        while time.monotonic()<deadline and not self.stop_hunt_event.is_set():
+            if self._is_overworld():
+                ready+=1
+                if ready>=4:
+                    break
+            else:
+                ready=0
+            if not self._sleep(.08): return False
+        if ready<4:
+            raise RuntimeError("Overworld did not become stable after escaping the wild battle")
+        if not self._sleep(.30): return False
+        self.bot.set_stick("LEFT",0,0)
         self._wild_horizontal = not self._wild_horizontal
         return not self.stop_hunt_event.is_set()
 
