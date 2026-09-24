@@ -1335,13 +1335,23 @@ class BackendWorker(QThread):
         # DOWN -> RIGHT -> A path inside botbase, avoiding the normal
         # inter-command scheduling gap that caused the missed directional
         # input.  Keep the sequence isolated from Auto Capture.
-        self.status.emit({"state":"RUNNING","message":"Selecting Run (atomic DOWN, RIGHT, A)…"})
-        self.bot.click_sequence("DDOWN,W250,DRIGHT,W450,A")
-        if not self._sleep(.25): return False
+        self.status.emit({"state":"RUNNING","message":"Selecting Run — DOWN then RIGHT…"})
+        # Do not use clickSeq here.  The hardware result showed that the
+        # atomic sequence was not producing the expected cursor movement.
+        # Send each direction as a normal controller click and verify the
+        # battle menu remains active before continuing.
+        self.bot.click("DDOWN")
+        if not self._sleep(.30): return False
+        self.bot.click("DRIGHT")
+        if not self._sleep(.45): return False
 
-        # Never continue issuing A if the run did not actually leave battle.
-        # A second A could activate whichever battle command is highlighted
-        # after a failed directional input.
+        # A single A selects the current command.  Never retry A blindly:
+        # if either directional input was missed, A could select Bag/PKMN.
+        if not self._battle_menu_ready():
+            raise RuntimeError("Battle menu left command state while selecting Run")
+        self.bot.click("A")
+        if not self._sleep(.30): return False
+
         deadline=time.monotonic()+15
         while time.monotonic()<deadline and not self.stop_hunt_event.is_set():
             if not self._is_in_battle():
