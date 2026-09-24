@@ -1181,7 +1181,10 @@ class BackendWorker(QThread):
             if bool(options.get("auto_capture", False)):
                 capture_options=dict(options, _capture_species_id=int(p.species))
                 if self._auto_capture(capture_options, species_name(p.species)):
-                    return
+                    # A successful non-shiny capture is not the end of the
+                    # hunt.  Return to the top of the wild loop so Spin/Wiggle
+                    # resumes from the stable overworld after the catch flow.
+                    continue
             else:
                 if not self._escape_battle(): return
 
