@@ -245,10 +245,70 @@ class BackendWorker(QThread):
                     return False
         return self._battle_menu_ready()
 
+    def _capture_probe_snapshot(self):
+        """Read the small set of RAM fields established by capture_flow_probe.
+
+        The standalone probe records these fields at high frequency.  The live
+        capture engine uses the same fields as a closed-loop guard around each
+        controller action instead of relying on fixed sleeps alone.
+        """
+        return {
+            "in_battle": self.bot.read_heap(IN_BATTLE, 1)[0],
+            "battle_menu": self.bot.read_heap(BATTLE_MENU, 1)[0],
+            "overworld": self.bot.read_heap(self.off.overworld, 1)[0],
+        }
+
+    def _capture_probe_wait(self, predicate, timeout=3.0, label="capture state", interval=.05, stable=2):
+        """Wait for a probe-defined state predicate to be true and stable."""
+        deadline = time.monotonic() + float(timeout)
+        stable_count = 0
+        last = None
+        while time.monotonic() < deadline and not self.stop_hunt_event.is_set():
+            snap = self._capture_probe_snapshot()
+            if predicate(snap):
+                stable_count += 1
+                last = snap
+                if stable_count >= max(1, int(stable)):
+                    return last
+            else:
+                stable_count = 0
+            if not self._sleep(interval):
+                return None
+        self.log.emit(f"CAPTURE PROBE TIMEOUT: {label} | last={last}")
+        return None
+
+    def _capture_probe_transition(self, before, predicate=None, timeout=3.0, label="input transition"):
+        """Wait until RAM changes after an input, then optionally reaches a target state."""
+        changed = self._capture_probe_wait(
+            lambda s: s != before,
+            timeout=timeout,
+            label=f"{label} transition",
+            interval=.05,
+            stable=1,
+        )
+        if changed is None:
+            return None
+        if predicate is None:
+            return self._capture_probe_wait(
+                lambda s: s == changed,
+                timeout=.8,
+                label=f"{label} settle",
+                interval=.05,
+                stable=2,
+            ) or changed
+        return self._capture_probe_wait(predicate, timeout=timeout, label=f"{label} target", interval=.05, stable=2)
+
     def _menu_move(self, x, y, label, hold=.12):
-        """Move the in-battle menu with the same left-stick path used by FRLG movement."""
+        """Move a capture menu and synchronize to the RAM transition recorded by the probe."""
         self.status.emit({"state":"CAPTURE_MENU","message":label})
-        return self._stick_tap(x,y,hold=hold,settle=.16)
+        before = self._capture_probe_snapshot()
+        if not self._stick_tap(x, y, hold=hold, settle=.08):
+            return False
+        # A menu cursor/pocket change is allowed to use either of the observed
+        # FRLG capture-menu states (0xF0/0xF2).  We only require that the probe
+        # state actually changed and then settled before the next input.
+        changed = self._capture_probe_transition(before, timeout=1.5, label=label)
+        return changed is not None
     def _is_overworld(self): return self.bot.read_heap(self.off.overworld,1)[0]==0xFF
 
     def _wait_overworld(self):
@@ -576,14 +636,23 @@ class BackendWorker(QThread):
             # capture_ball_slot is an absolute slot from the top of the
             # Poké Balls list, not "move down again from the current cursor".
             self.status.emit({"state":"CAPTURE_MENU","message":"Auto Capture: opening Poké Balls pocket…"})
-            if not self._sleep(.80):
-                return False
-            for index in range(2):
-                self.bot.click("DRIGHT")
-                if not self._sleep(.65):
-                    return False
             if not self._sleep(.50):
                 return False
+            # capture_flow_probe showed the Bag state oscillating between
+            # 0xF0 and 0xF2 while the pocket selector moved.  Do not send the
+            # second horizontal input until the first transition has settled.
+            for index in range(2):
+                before = self._capture_probe_snapshot()
+                if not self._stick_tap(0x7FFF, 0, hold=.12, settle=.08):
+                    return False
+                changed = self._capture_probe_transition(
+                    before,
+                    predicate=lambda s: s["battle_menu"] in (0xF0, 0xF2),
+                    timeout=2.0,
+                    label=f"Poké Balls pocket move {index+1}",
+                )
+                if changed is None:
+                    raise RuntimeError(f"Capture probe did not confirm Poké Balls pocket move {index+1}")
 
             # Normalize the Poké Balls cursor to the top before applying the
             # configured slot. DUP is safe at the top boundary and, unlike
@@ -608,12 +677,32 @@ class BackendWorker(QThread):
             # no B here: B was causing the configured slot to be cancelled and
             # the cursor to return to slot 1 on hardware.
             self.status.emit({"state":"CAPTURE_MENU","message":f"Auto Capture: throwing selected ball (slot {ball_slot})…"})
+            before_throw = self._capture_probe_snapshot()
             self.bot.click("A")
-            if not self._sleep(.55):
-                return False
+            # First A selects the highlighted ball. Wait for the menu RAM to
+            # leave the pocket state before issuing the confirmation A.
+            selected = self._capture_probe_transition(
+                before_throw,
+                predicate=lambda s: s["battle_menu"] not in (0xF0, 0xF2),
+                timeout=2.5,
+                label="ball selection A",
+            )
+            if selected is None:
+                raise RuntimeError("Capture probe did not confirm ball selection")
+
+            before_confirm = self._capture_probe_snapshot()
             self.bot.click("A")
-            if not self._sleep(.25):
-                return False
+            # The throw starts the battle/script transition. Accept either a
+            # battle-state change or the command-menu reset observed by the
+            # probe; never fire another A just because a timer expired.
+            confirmed = self._capture_probe_transition(
+                before_confirm,
+                predicate=lambda s: s["in_battle"] != before_confirm["in_battle"] or s["battle_menu"] == 0,
+                timeout=3.0,
+                label="ball throw confirmation A",
+            )
+            if confirmed is None:
+                raise RuntimeError("Capture probe did not confirm Poké Ball throw")
             self.status.emit({"state":"CAPTURE","message":f"Auto Capture: throw {throw}/{max_throws}…"})
 
             wait_end=min(deadline,time.monotonic()+8.0)
