@@ -805,11 +805,13 @@ class BackendWorker(QThread):
         self._oak_blocked={int(x) for x in options.get("oak_blocked",[]) if str(x).isdigit()}
         attempt=0
         while not self.stop_hunt_event.is_set():
-            movement_label="Spin" if self._wild_movement_mode=="spin" else "Wiggle"
+            movement_label={"spin":"Spin (Analog)","spin_dpad":"Spin (D-Pad)"}.get(self._wild_movement_mode,"Wiggle")
             target_label=", ".join(species_name(x) for x in sorted(self._oak_targets)) if self._oak_targets else "any non-blocked species"
             self.status.emit({"state":"HUNTING","message":f"Oak Mode: searching for {target_label} ({movement_label})","attempt":attempt})
             if self._wild_movement_mode=="spin":
                 if not self._spin_to_battle(spin_hold,spin_settle): return
+            elif self._wild_movement_mode=="spin_dpad":
+                if not self._spin_dpad_to_battle(spin_hold,spin_settle): return
             else:
                 if not self._wiggle_to_battle(): return
             p=parse_pk3(self.bot.read_heap(self.off.wild_pokemon,BOX_FORMAT_SLOT_SIZE))
