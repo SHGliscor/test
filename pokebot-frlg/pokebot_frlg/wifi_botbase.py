@@ -175,6 +175,18 @@ class WiFiBotbase:
             raise ValueError("stick side must be LEFT or RIGHT")
         self.send(f"setStick {side} {int(x)} {int(y)}")
 
+    def click_sequence(self, sequence: str):
+        """Run a Koi clickSeq atomically inside the Switch sysmodule.
+
+        This is important for Gen3-style Spin: the directional input must
+        exist for roughly one game frame. Sending separate setStick commands
+        exposes each command to botbase's normal scheduling delay and can turn
+        a one-frame turn into a real movement.
+        """
+        if not sequence or any(ch in sequence for ch in "\r\n "):
+            raise ValueError("click sequence must be non-empty and contain no spaces/CR/LF")
+        self.send(f"clickSeq {sequence}")
+
     def initialize_controller(self, settle_s: float = 0.75):
         # Match the public SysBot FRLG startup flow: detach any stale HDLS
         # virtual controller, then create a clean neutral controller state.
