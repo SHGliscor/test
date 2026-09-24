@@ -397,6 +397,20 @@ class BackendWorker(QThread):
                         break
             if caught is not None:
                 self.status.emit({"state":"CAPTURE_RESULT","message":f"Auto Capture: {species_name(species)} confirmed in party; finishing Pokédex/nickname flow…"})
+                # A newly registered species enters FRLG's Pokédex display
+                # before the nickname prompt. That screen needs an explicit
+                # advance; B alone can leave Auto Capture parked on the Dex
+                # screen. If the species was already registered, A may briefly
+                # open the nickname input; the following B cancels that input
+                # and the subsequent B declines the nickname normally.
+                if not self._sleep(.45):
+                    return False
+                self.bot.click("A")
+                if not self._sleep(.70):
+                    return False
+                self.bot.click("B")
+                if not self._sleep(.25):
+                    return False
                 break
             if not self._sleep(.10):
                 return False
