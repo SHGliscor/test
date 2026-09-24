@@ -13,7 +13,7 @@ from .rng import (miss_from_capture, roamer_miss_from_capture, find_method1_targ
                   forward_distance_limited, nearby_signed_distance)
 
 GBA_SAVE_BASE = 0x02020000
-CAPTURE_BACKEND_BUILD = "v4-press-dex-20260924"
+CAPTURE_BACKEND_BUILD = "v5-atomic-run-20260924"
 
 class BackendWorker(QThread):
     connection = Signal(dict)
@@ -1329,19 +1329,27 @@ class BackendWorker(QThread):
         #   Fight | Bag
         #   PKMN  | Run
         #
-        # Hardware testing showed RIGHT -> DOWN can leave the cursor on
-        # PKMN when the RIGHT click is missed.  Use the other route:
-        # DOWN -> RIGHT.  If DOWN is accepted, the cursor is on PKMN;
-        # RIGHT then moves directly to Run.
-        self.status.emit({"state":"RUNNING","message":"Selecting Run (DOWN, RIGHT)…"})
-        self.bot.click("DDOWN")
-        if not self._sleep(.35): return False
-        self.bot.click("DRIGHT")
-        if not self._sleep(.45): return False
+        # IMPORTANT: non-auto-capture must never blindly send RIGHT then A.
+        # If a standalone DDOWN is lost, RIGHT leaves the cursor on Bag and
+        # the following A opens the Bag.  Koi clickSeq executes the complete
+        # DOWN -> RIGHT -> A path inside botbase, avoiding the normal
+        # inter-command scheduling gap that caused the missed directional
+        # input.  Keep the sequence isolated from Auto Capture.
+        self.status.emit({"state":"RUNNING","message":"Selecting Run (atomic DOWN, RIGHT, A)…"})
+        self.bot.click_sequence("DDOWN,W250,DRIGHT,W450,A")
+        if not self._sleep(.25): return False
+
+        # Never continue issuing A if the run did not actually leave battle.
+        # A second A could activate whichever battle command is highlighted
+        # after a failed directional input.
         deadline=time.monotonic()+15
-        while time.monotonic()<deadline and not self.stop_hunt_event.is_set() and self._is_in_battle():
-            self.bot.click("A"); self._sleep(.20)
-        if self._is_in_battle() and not self.stop_hunt_event.is_set(): raise RuntimeError("Could not escape the wild battle")
+        while time.monotonic()<deadline and not self.stop_hunt_event.is_set():
+            if not self._is_in_battle():
+                break
+            if not self._sleep(.20):
+                return False
+        if self._is_in_battle() and not self.stop_hunt_event.is_set():
+            raise RuntimeError("Run selection failed — battle is still active; no fallback menu input was sent")
 
         # Battle RAM can clear slightly before FRLG has actually returned
         # control to the overworld. Starting Spin immediately at that point
