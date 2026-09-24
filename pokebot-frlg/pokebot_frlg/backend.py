@@ -578,7 +578,8 @@ class BackendWorker(QThread):
                 continue
 
             d["oak_target"]=True
-            if self._auto_capture(options, species_name(p.species)):
+            capture_options=dict(options, _capture_species_id=int(p.species))
+            if self._auto_capture(capture_options, species_name(p.species)):
                 self.status.emit({"state":"CAPTURED","message":f"Oak target captured: {species_name(p.species)} — advancing Oak line progress.","attempt":attempt,"oak_target":True,"oak_captured":True,"species_id":int(p.species)})
                 self.stop_hunt_event.set()
                 return
