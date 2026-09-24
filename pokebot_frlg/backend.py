@@ -1335,7 +1335,7 @@ class BackendWorker(QThread):
         # RIGHT then moves directly to Run.
         self.status.emit({"state":"RUNNING","message":"Selecting Run (DOWN, RIGHT)…"})
         self.bot.click("DDOWN")
-        if not self._sleep(.50): return False
+        if not self._sleep(.80): return False
         self.bot.click("DRIGHT")
         if not self._sleep(.60): return False
         deadline=time.monotonic()+15
