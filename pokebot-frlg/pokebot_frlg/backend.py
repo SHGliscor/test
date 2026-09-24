@@ -475,6 +475,23 @@ class BackendWorker(QThread):
                 self.status.emit({"state":"RUNNING","message":f"Oak Mode: {species_name(p.species)} blocked/not targeted — escaping…","attempt":attempt})
                 if not self._escape_battle(): return
                 continue
+
+            # Oak Challenge can explicitly require shiny or non-shiny
+            # encounters. Preserve the historical non-shiny behaviour as the
+            # default, while allowing a dedicated Shiny Only mode.
+            oak_shiny_mode=str(options.get("oak_shiny_mode","non_shiny") or "non_shiny")
+            shiny_match=(oak_shiny_mode=="shiny" and bool(p.shiny)) or (
+                oak_shiny_mode!="shiny" and oak_shiny_mode!="non_shiny"
+            ) or (oak_shiny_mode=="non_shiny" and not bool(p.shiny))
+            if not shiny_match:
+                wanted="shiny" if oak_shiny_mode=="shiny" else "non-shiny"
+                actual="shiny" if p.shiny else "non-shiny"
+                self.status.emit({"state":"RUNNING","message":
+                    f"Oak Mode: {species_name(p.species)} is {actual}; {wanted} only — escaping…",
+                    "attempt":attempt})
+                if not self._escape_battle(): return
+                continue
+
             d=self._enrich(p); d["attempt"]=attempt; d["source"]="Oak Challenge"; d["oak_target"]=True
             d.update(self._rng_miss_fields(p,context="wild"))
             self.encounter.emit(d)
