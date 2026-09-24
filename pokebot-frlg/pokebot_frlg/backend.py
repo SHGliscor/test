@@ -521,11 +521,49 @@ class BackendWorker(QThread):
                             break
 
                 if not self._is_in_battle():
-                    self.status.emit({"state":"CAPTURE_RESULT","message":f"Auto Capture: capture sequence ended after throw {throw}; handling post-capture flow…"})
-                    return self._finish_caught_pokemon(capture_species, baseline_party, timeout=max(2.0,deadline-time.monotonic()))
+                    # Do not treat a transient battle-RAM transition as a
+                    # successful catch. A failed ball can briefly clear/update
+                    # battle state while FRLG is still processing the
+                    # "broke free" message. Require the wild battle to stay
+                    # closed, or confirm the caught species in the party.
+                    caught_delta=False
+                    stable_out=0
+                    check_deadline=min(wait_end,time.monotonic()+1.5)
+                    while time.monotonic()<check_deadline and not self.stop_hunt_event.is_set():
+                        current=self._party_slots()
+                        for index,p in enumerate(current):
+                            if not p.valid or p.is_egg:
+                                continue
+                            before=baseline_party[index] if index<len(baseline_party) else None
+                            if (before is None or not before.valid or before.raw_hex!=p.raw_hex) and int(p.species)==capture_species:
+                                caught_delta=True
+                                break
+                        if caught_delta:
+                            break
+                        if self._is_in_battle():
+                            break
+                        stable_out+=1
+                        if stable_out>=5:
+                            break
+                        if not self._sleep(.10):
+                            return False
+
+                    if caught_delta or stable_out>=5:
+                        self.status.emit({"state":"CAPTURE_RESULT","message":f"Auto Capture: throw {throw} ended the battle; handling post-capture flow…"})
+                        return self._finish_caught_pokemon(capture_species, baseline_party, timeout=max(2.0,deadline-time.monotonic()))
+
+                    # Battle state came back after a transient clear: this was
+                    # not a completed capture. Continue waiting for the battle
+                    # command menu and retry with the configured ball.
+                    self.status.emit({"state":"CAPTURE","message":f"Auto Capture: throw {throw} did not finish the battle; waiting to retry…"})
+                    if not self._sleep(.20):
+                        return False
+                    continue
 
                 if self._battle_menu_ready():
-                    self.status.emit({"state":"CAPTURE","message":f"Auto Capture: throw {throw} did not finish the battle; retrying…"})
+                    self.status.emit({"state":"CAPTURE","message":f"Auto Capture: throw {throw} failed/broke out — retrying with ball slot {ball_slot}…"})
+                    if not self._sleep(.30):
+                        return False
                     break
                 if not self._sleep(.10):
                     return False
