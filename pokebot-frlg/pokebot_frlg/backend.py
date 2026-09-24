@@ -889,37 +889,61 @@ class BackendWorker(QThread):
         self.bot.set_stick("LEFT",0,0)
         return self._sleep(settle)
 
-    def _spin_to_battle(self, hold=.012, settle=.012):
-        """Turn on the current tile without deliberately walking.
+    def _spin_to_battle(self, hold=.017, settle=.017):
+        """Reproduce 40Cakes' Gen3 Spin timing on the Switch wrapper.
 
-        The previous counter-steer experiment made the Switch wrapper much
-        worse because every opposite-stick command was still a real movement
-        input.  Gen3 Spin is a rapid sequence of direction changes on one
-        tile: each direction is released before the game's movement repeat
-        can advance to another tile.
+        40Cakes does not hold a direction for a normal movement interval.
+        Its mGBA implementation presses one cardinal direction for exactly
+        one emulated frame, then the next frame has no directional input.
+        It only sends the next direction when the avatar is already standing
+        still. That is what lets FRLG rotate on one tile.
 
-        Koi's setStick command is send-only, so the useful unit here is the
-        actual time between stick updates.  Keep the directional pulse very
-        short and use a small analogue magnitude; the goal is to register
-        the facing change, not a full-strength walking command.
+        Sending individual setStick commands through Koi is not equivalent:
+        botbase schedules each command independently, so even a 12 ms Python
+        sleep can leave the stick held long enough to move a tile. Koi's
+        clickSeq command executes the stick changes and waits inside the
+        sysmodule, avoiding that scheduling gap.
+
+        We therefore send exactly one directional frame followed by one
+        neutral frame per spin step, then check battle RAM before continuing.
         """
-        self.bot.set_stick("LEFT",0,0)
-        hold=max(.005,min(.100,float(hold)))
-        settle=max(.005,min(.100,float(settle)))
-        magnitude=0x4000
+        self.bot.set_stick("LEFT", 0, 0)
+
+        # FRLG runs at roughly 60 Hz.  17 ms is one game frame and mirrors
+        # 40Cakes/libmgba's press_button -> run_single_frame behaviour.
+        frame_ms=max(15,min(20,round(float(hold)*1000)))
+        neutral_ms=max(15,min(20,round(float(settle)*1000)))
+        magnitude=0x7FFF
         directions=(
-            (0,magnitude),       # UP
-            (magnitude,0),       # RIGHT
-            (0,-magnitude),      # DOWN
-            (-magnitude,0),      # LEFT
+            (0, magnitude),       # Up
+            (magnitude, 0),       # Right
+            (0, -magnitude),      # Down
+            (-magnitude, 0),      # Left
         )
+
         while not self.stop_hunt_event.is_set() and not self._is_in_battle():
-            for x,y in directions:
-                if self._is_in_battle() or self.stop_hunt_event.is_set():
+            for x, y in directions:
+                if self.stop_hunt_event.is_set() or self._is_in_battle():
                     break
-                if not self._stick_tap(x,y,hold=hold,settle=settle):
+
+                # One direction frame, then one neutral frame.  Keep this as
+                # one clickSeq transaction so Koi's main-loop command delay
+                # cannot stretch the directional hold.
+                seq=(
+                    f"%{x},{y},W{frame_ms},%0,0,W{neutral_ms}"
+                )
+                self.bot.click_sequence(seq)
+
+                # clickSeq is synchronous: once it returns the one-frame
+                # directional input has been released and the neutral frame
+                # has elapsed.
+                if self.stop_hunt_event.is_set():
+                    self.bot.set_stick("LEFT", 0, 0)
                     return False
-        self.bot.set_stick("LEFT",0,0)
+                if self._is_in_battle():
+                    break
+
+        self.bot.set_stick("LEFT", 0, 0)
         if self._is_in_battle():
             self._sleep(1.0)
             return True
