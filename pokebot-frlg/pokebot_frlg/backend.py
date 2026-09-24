@@ -495,6 +495,11 @@ class BackendWorker(QThread):
         self.status.emit({"state":"CAPTURE","message":f"Auto Capture: {label} — preparing Poké Ball slot {ball_slot}…"})
         deadline=time.monotonic()+45
         baseline_party=self._party_slots()
+        # The caller passes the current wild species so post-capture verification
+        # never relies on the display label.
+        capture_species=int(options.get("_capture_species_id",0) or 0)
+        if capture_species<=0:
+            raise RuntimeError("Auto Capture missing current wild species id")
         pokedex_owned_before=self._read_pokedex_owned(capture_species)
         if pokedex_owned_before is True:
             self.log.emit(f"CAPTURE PROBE: {label} already registered in Pokedex before capture")
@@ -502,9 +507,6 @@ class BackendWorker(QThread):
             self.log.emit(f"CAPTURE PROBE: {label} not registered in Pokedex before capture")
         else:
             self.log.emit(f"CAPTURE PROBE: Pokedex state unavailable before capturing {label}")
-        # The caller passes the current wild species so post-capture verification
-        # never relies on the display label.
-        capture_species=int(options.get("_capture_species_id",0) or 0)
         if capture_species<=0:
             raise RuntimeError("Auto Capture missing current wild species id")
         # A wild encounter first shows the "Wild <Pokémon> appeared!"
