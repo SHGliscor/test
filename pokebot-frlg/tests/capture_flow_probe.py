@@ -1,4 +1,10 @@
 from __future__ import annotations
+import os
+import sys
+
+# Allow direct execution from pokebot-frlg\\tests without installing the package.
+# The package root is the parent directory of this tests folder.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import argparse
 import json
 import time
