@@ -1404,6 +1404,8 @@ class BackendWorker(QThread):
         self.status.emit({"state":"TESTING","message":"Auto Capture Test: searching for the first wild encounter…"})
         if self._wild_movement_mode=="spin":
             if not self._spin_to_battle(spin_hold,spin_settle): return
+        elif self._wild_movement_mode=="spin_dpad":
+            if not self._spin_dpad_to_battle(spin_hold,spin_settle): return
         elif not self._wiggle_to_battle(): return
         self._sleep(.8)
         p=parse_pk3(self.bot.read_heap(self.off.wild_pokemon,BOX_FORMAT_SLOT_SIZE))
