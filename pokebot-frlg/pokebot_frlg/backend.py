@@ -403,29 +403,21 @@ class BackendWorker(QThread):
                 # screen. If the species was already registered, A may briefly
                 # open the nickname input; the following B cancels that input
                 # and the subsequent B declines the nickname normally.
-                # Give the newly registered Pokédex screen time to finish
-                # loading before sending the required A.  The sequence is
-                # specifically: Pokédex screen -> A -> nickname screen -> B.
-                if not self._sleep(.90):
+                # FRLG's new-species registration screen is a blocking
+                # display task.  The previous press/release sequence could
+                # arrive while that task was still taking control, leaving the
+                # bot parked on the Pokédex.  Use the same Koi click transport
+                # that is already proven throughout the rest of Auto Capture,
+                # and give the registration screen a full settling interval.
+                if not self._sleep(2.25):
                     return False
                 self.status.emit({"state":"CAPTURE_RESULT","message":f"Auto Capture: advancing {species_name(species)} Pokédex entry…"})
-                # Use an explicit A press/release rather than click A. The
-                # Pokédex registration screen can ignore a very short click
-                # while its display task is settling.
-                self.bot.press("A")
-                if not self._sleep(.18):
-                    self.bot.release("A")
-                    return False
-                self.bot.release("A")
-                if not self._sleep(1.50):
+                self.bot.click("A")
+                if not self._sleep(1.75):
                     return False
                 self.status.emit({"state":"CAPTURE_RESULT","message":"Auto Capture: declining nickname…"})
-                self.bot.press("B")
-                if not self._sleep(.18):
-                    self.bot.release("B")
-                    return False
-                self.bot.release("B")
-                if not self._sleep(.60):
+                self.bot.click("B")
+                if not self._sleep(1.00):
                     return False
                 break
             if not self._sleep(.10):
