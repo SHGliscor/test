@@ -520,7 +520,19 @@ class BackendWorker(QThread):
     def _shiny_action(self, label, attempt, options, suffix=""):
         if bool(options.get("shiny_auto_capture",False)):
             self.status.emit({"state":"SHINY_CAPTURE","message":f"SHINY {label} FOUND — Auto Capture enabled." ,"attempt":attempt})
-            if self._auto_capture(dict(options,auto_capture=True), label):
+            # _auto_capture now verifies the caught species against the party
+            # rather than treating the end of battle RAM as proof of capture.
+            # Normal wild encounters pass this explicitly; shiny encounters
+            # reach this helper, so read the live wild PK3 here as well.
+            capture_options=dict(options, auto_capture=True)
+            try:
+                wild=parse_pk3(self.bot.read_heap(self.off.wild_pokemon,BOX_FORMAT_SLOT_SIZE))
+            except Exception:
+                wild=None
+            if wild is None or not wild.valid:
+                raise RuntimeError("Shiny Auto Capture could not read the current wild Pokémon")
+            capture_options["_capture_species_id"]=int(wild.species)
+            if self._auto_capture(capture_options, label):
                 return True
             return False
         self._shiny_home(label,attempt,suffix)
