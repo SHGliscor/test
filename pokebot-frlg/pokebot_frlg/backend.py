@@ -473,23 +473,38 @@ class BackendWorker(QThread):
                 raise RuntimeError("Could not move to BAG in the battle menu")
             self.bot.click("A"); self._sleep(.65)
 
-            self.status.emit({"state":"CAPTURE_MENU","message":"Auto Capture: moving to Poké Balls pocket (RIGHT x2)…"})
-            if not self._sleep(.40):
+            # The Bag remembers the last pocket/cursor position. Do not
+            # assume that it is already on Poké Balls: explicitly move to the
+            # Poké Balls pocket, then select the configured ball.
+            self.status.emit({"state":"CAPTURE_MENU","message":"Auto Capture: opening Poké Balls pocket…"})
+            if not self._sleep(.80):
                 return False
             for index in range(2):
                 self.bot.click("DRIGHT")
-                if not self._sleep(.45):
+                if not self._sleep(.65):
                     return False
-            self.status.emit({"state":"CAPTURE_MENU","message":"Auto Capture: selecting Poké Balls pocket…"})
-            self.bot.click("A")
-            if not self._sleep(.65):
+            if not self._sleep(.50):
                 return False
 
-            for _ in range(ball_slot-1):
-                self.bot.click("DDOWN"); self._sleep(.12)
-            self.status.emit({"state":"CAPTURE_MENU","message":f"Auto Capture: throwing ball slot {ball_slot}…"})
-            self.bot.click("A"); self._sleep(.25)
+            self.status.emit({"state":"CAPTURE_MENU","message":f"Auto Capture: selecting ball slot {ball_slot}…"})
+            for index in range(ball_slot-1):
+                self.bot.click("DDOWN")
+                if not self._sleep(.35):
+                    return False
+            if not self._sleep(.35):
+                return False
+
+            # One A selects the highlighted ball and advances to the use/throw
+            # confirmation. A second A confirms the throw. There is deliberately
+            # no B here: B was causing the configured slot to be cancelled and
+            # the cursor to return to slot 1 on hardware.
+            self.status.emit({"state":"CAPTURE_MENU","message":f"Auto Capture: throwing selected ball (slot {ball_slot})…"})
             self.bot.click("A")
+            if not self._sleep(.55):
+                return False
+            self.bot.click("A")
+            if not self._sleep(.25):
+                return False
             self.status.emit({"state":"CAPTURE","message":f"Auto Capture: throw {throw}/{max_throws}…"})
 
             wait_end=min(deadline,time.monotonic()+8.0)
