@@ -367,6 +367,78 @@ class BackendWorker(QThread):
             return False
         return not self._oak_targets or species in self._oak_targets
 
+    def _finish_caught_pokemon(self, species, baseline_party, timeout=12.0):
+        """Finish FRLG's post-capture script without blind A-button spam.
+
+        FireRed's catch script first records the catch, optionally displays the
+        new-Pokédex entry, then reaches the nickname prompt.  pokebot-gen3
+        handles those states from the battle script and uses B to decline the
+        nickname.  On Switch we do not currently expose the GBA battle-script
+        opcode, so use the party data as the capture-complete signal and only
+        send B while the battle script is still active.
+
+        This is deliberately B-only here: A can select FIGHT/BAG or advance a
+        screen we have not positively identified.
+        """
+        deadline=time.monotonic()+float(timeout)
+        caught=None
+
+        # First wait for the caught Pokémon to be committed to the party.
+        # This also prevents a false success merely because IN_BATTLE cleared.
+        while time.monotonic()<deadline and not self.stop_hunt_event.is_set():
+            current=self._party_slots()
+            for index,p in enumerate(current):
+                if not p.valid or p.is_egg:
+                    continue
+                before=baseline_party[index] if index<len(baseline_party) else None
+                if before is None or not before.valid or before.raw_hex!=p.raw_hex:
+                    if int(p.species)==int(species):
+                        caught=p
+                        break
+            if caught is not None:
+                self.status.emit({"state":"CAPTURE_RESULT","message":f"Auto Capture: {species_name(species)} confirmed in party; finishing Pokédex/nickname flow…"})
+                break
+            if not self._sleep(.10):
+                return False
+
+        # A full party can send the new Pokémon to a PC, so absence from the
+        # party is not by itself a failed capture.  Once the battle has ended,
+        # allow the game's own post-capture script to finish.  If it is still
+        # active, B is the safe non-selecting input used by pokebot-gen3 to
+        # advance the catch/nickname dialogue.
+        while time.monotonic()<deadline and not self.stop_hunt_event.is_set() and self._is_in_battle():
+            self.bot.click("B")
+            if not self._sleep(.18):
+                return False
+
+        # Do not resume Spin/Wiggle while the return-to-field script is still
+        # handing control back to the player.  Keep the stick neutral and
+        # require several consecutive overworld polls.
+        self.bot.set_stick("LEFT",0,0)
+        stable=0
+        while time.monotonic()<deadline and not self.stop_hunt_event.is_set():
+            if self._is_overworld():
+                stable+=1
+                if stable>=5:
+                    break
+            else:
+                stable=0
+            if not self._sleep(.08):
+                return False
+        if stable<5:
+            raise RuntimeError("Auto Capture post-catch sequence did not return to a stable overworld")
+
+        self.party.emit(self._read_party())
+        if caught is not None:
+            self.status.emit({"state":"CAPTURED","message":f"Auto Capture complete: {species_name(species)} caught; Pokédex/nickname flow finished."})
+            return True
+
+        # No party delta is expected when the party was already full.  The
+        # successful catch has nevertheless reached the post-capture script and
+        # returned cleanly to the overworld.
+        self.status.emit({"state":"CAPTURED","message":f"Auto Capture complete: {species_name(species)} caught; post-capture flow finished."})
+        return True
+
     def _auto_capture(self, options, label):
         """Capture the current non-shiny wild encounter using controller input only."""
         if not bool(options.get("auto_capture", False)):
@@ -375,6 +447,12 @@ class BackendWorker(QThread):
         max_throws=max(1,min(99,int(options.get("capture_max_throws",10) or 10)))
         self.status.emit({"state":"CAPTURE","message":f"Auto Capture: {label} — preparing Poké Ball slot {ball_slot}…"})
         deadline=time.monotonic()+45
+        baseline_party=self._party_slots()
+        # The caller passes the current wild species so post-capture verification
+        # never relies on the display label.
+        capture_species=int(options.get("_capture_species_id",0) or 0)
+        if capture_species<=0:
+            raise RuntimeError("Auto Capture missing current wild species id")
         # A wild encounter first shows the "Wild <Pokémon> appeared!"
         # message. Advance it once, then let _wait_battle_menu() actively clear
         # any remaining battle text with B. This avoids the previous deadlock
@@ -390,21 +468,12 @@ class BackendWorker(QThread):
             if not self._is_in_battle():
                 raise RuntimeError("Auto Capture lost the battle before opening the Bag")
 
-            # FRLG battle command grid: FIGHT (top-left), BAG (top-right),
-            # POKéMON (bottom-left), RUN (bottom-right). Start on FIGHT.
             self.status.emit({"state":"CAPTURE_MENU","message":"Auto Capture: opening Bag…"})
             if not self._menu_move(0x7FFF,0,"Auto Capture: selecting BAG"):
                 raise RuntimeError("Could not move to BAG in the battle menu")
             self.bot.click("A"); self._sleep(.65)
 
-            # The Bag opens on the Items pocket. The JSON hardware log shows
-            # the Poké Ball pocket is reached with two D-pad RIGHT presses
-            # from this starting pocket. Use D-pad here; left-stick movement
-            # is only for the battle command grid.
             self.status.emit({"state":"CAPTURE_MENU","message":"Auto Capture: moving to Poké Balls pocket (RIGHT x2)…"})
-            # Bag pocket tabs need a slower, discrete D-pad transition than the
-            # battle command grid. Give the Bag time to finish opening, then
-            # separate each RIGHT press so neither input is lost by the UI.
             if not self._sleep(.40):
                 return False
             for index in range(2):
@@ -416,8 +485,6 @@ class BackendWorker(QThread):
             if not self._sleep(.65):
                 return False
 
-            # Select the configured listed ball. We deliberately use DOWN, not
-            # the battle-menu stick, because the ball list is a vertical list.
             for _ in range(ball_slot-1):
                 self.bot.click("DDOWN"); self._sleep(.12)
             self.status.emit({"state":"CAPTURE_MENU","message":f"Auto Capture: throwing ball slot {ball_slot}…"})
@@ -425,23 +492,31 @@ class BackendWorker(QThread):
             self.bot.click("A")
             self.status.emit({"state":"CAPTURE","message":f"Auto Capture: throw {throw}/{max_throws}…"})
 
-            # A successful catch ends the battle. A failed throw returns to the
-            # battle command menu. Never call a battle-end transition a capture
-            # until the caller verifies the party/box state.
-            wait_end=min(deadline,time.monotonic()+6.0)
+            wait_end=min(deadline,time.monotonic()+8.0)
             while time.monotonic()<wait_end and not self.stop_hunt_event.is_set():
+                # Check the party first. A successful catch may still be inside
+                # FRLG's catch/Pokédex/nickname script while IN_BATTLE is true.
+                current=self._party_slots()
+                for index,p in enumerate(current):
+                    if not p.valid or p.is_egg:
+                        continue
+                    before=baseline_party[index] if index<len(baseline_party) else None
+                    if before is None or not before.valid or before.raw_hex!=p.raw_hex:
+                        if int(p.species)==capture_species:
+                            break
+
                 if not self._is_in_battle():
-                    self.status.emit({"state":"CAPTURE_RESULT","message":f"Auto Capture: battle ended after throw {throw}; verifying catch…"})
-                    self._sleep(1.0)
-                    return True
+                    self.status.emit({"state":"CAPTURE_RESULT","message":f"Auto Capture: capture sequence ended after throw {throw}; handling post-capture flow…"})
+                    return self._finish_caught_pokemon(capture_species, baseline_party, timeout=max(2.0,deadline-time.monotonic()))
+
                 if self._battle_menu_ready():
                     self.status.emit({"state":"CAPTURE","message":f"Auto Capture: throw {throw} did not finish the battle; retrying…"})
                     break
-                self._sleep(.12)
+                if not self._sleep(.10):
+                    return False
 
         self.status.emit({"state":"RUNNING","message":f"Auto Capture: could not catch {label} after {max_throws} throw(s) — escaping…"})
         return self._escape_battle()
-
     def _shiny_action(self, label, attempt, options, suffix=""):
         if bool(options.get("shiny_auto_capture",False)):
             self.status.emit({"state":"SHINY_CAPTURE","message":f"SHINY {label} FOUND — Auto Capture enabled." ,"attempt":attempt})
