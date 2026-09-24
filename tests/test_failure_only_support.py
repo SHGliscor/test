@@ -1,6 +1,5 @@
 import os
 import tempfile
-import zipfile
 from pathlib import Path
 
 
@@ -16,7 +15,7 @@ def test_normal_session_creates_no_archived_json(monkeypatch):
     assert not (app/"support").exists()
 
 
-def test_failure_creates_zip_only(monkeypatch):
+def test_failure_does_not_create_support_zip(monkeypatch):
     root=Path(tempfile.mkdtemp())
     monkeypatch.setenv("APPDATA",str(root))
     # Test environment need not install the GUI dependency; backend only needs
@@ -39,11 +38,4 @@ def test_failure_creates_zip_only(monkeypatch):
     except Exception as exc:
         w._fail(exc,"test")
     support=root/"PokebotSwitch-FRLG"/"support"
-    files=list(support.iterdir())
-    assert len(files)==1
-    assert files[0].suffix==".zip"
-    assert not list(support.glob("*.json"))
-    with zipfile.ZipFile(files[0]) as z:
-        names=z.namelist()
-        assert len(names)==1 and names[0].endswith(".json")
-        assert b"diagnostic test" in z.read(names[0])
+    assert not support.exists()
