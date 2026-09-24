@@ -299,16 +299,9 @@ class BackendWorker(QThread):
         return self._capture_probe_wait(predicate, timeout=timeout, label=f"{label} target", interval=.05, stable=2)
 
     def _menu_move(self, x, y, label, hold=.12):
-        """Move a capture menu and synchronize to the RAM transition recorded by the probe."""
+        """Move the in-battle menu with the same left-stick path used by FRLG movement."""
         self.status.emit({"state":"CAPTURE_MENU","message":label})
-        before = self._capture_probe_snapshot()
-        if not self._stick_tap(x, y, hold=hold, settle=.08):
-            return False
-        # A menu cursor/pocket change is allowed to use either of the observed
-        # FRLG capture-menu states (0xF0/0xF2).  We only require that the probe
-        # state actually changed and then settled before the next input.
-        changed = self._capture_probe_transition(before, timeout=1.5, label=label)
-        return changed is not None
+        return self._stick_tap(x,y,hold=hold,settle=.16)
     def _is_overworld(self): return self.bot.read_heap(self.off.overworld,1)[0]==0xFF
 
     def _wait_overworld(self):
@@ -628,7 +621,19 @@ class BackendWorker(QThread):
             self.status.emit({"state":"CAPTURE_MENU","message":"Auto Capture: opening Bag…"})
             if not self._menu_move(0x7FFF,0,"Auto Capture: selecting BAG"):
                 raise RuntimeError("Could not move to BAG in the battle menu")
-            self.bot.click("A"); self._sleep(.65)
+            self.bot.click("A")
+            # The probe shows the battle command state changing to the Bag
+            # selector (0xF0/0xF2) only after this A.  Synchronize here rather
+            # than sleeping a fixed amount before the pocket inputs.
+            bag_state = self._capture_probe_wait(
+                lambda s: s["battle_menu"] in (0xF0, 0xF2),
+                timeout=3.0,
+                label="open Bag / enter pocket selector",
+                interval=.05,
+                stable=2,
+            )
+            if bag_state is None:
+                raise RuntimeError("Capture probe did not confirm the Bag selector")
 
             # FRLG remembers both the last Bag pocket and the last cursor
             # position. After a failed throw the cursor can therefore reopen
