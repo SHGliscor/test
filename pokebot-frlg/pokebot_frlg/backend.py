@@ -471,6 +471,16 @@ class BackendWorker(QThread):
             p=parse_pk3(self.bot.read_heap(self.off.wild_pokemon,BOX_FORMAT_SLOT_SIZE))
             if not p.valid: raise RuntimeError("Battle started but wild PK3 was invalid")
             attempt+=1
+
+            # Every Oak encounter is a real encounter and must feed the normal
+            # session/current/last-seen pipeline, even when Oak filtering later
+            # rejects it. The previous implementation only emitted the signal
+            # after both the species and shiny filters, so rejected Oak
+            # encounters never reached the dashboard or session statistics.
+            d=self._enrich(p); d["attempt"]=attempt; d["source"]="Oak Challenge"; d["oak_target"]=False
+            d.update(self._rng_miss_fields(p,context="wild"))
+            self.encounter.emit(d)
+
             if not self._oak_species_allowed(p.species):
                 self.status.emit({"state":"RUNNING","message":f"Oak Mode: {species_name(p.species)} blocked/not targeted — escaping…","attempt":attempt})
                 if not self._escape_battle(): return
@@ -492,9 +502,7 @@ class BackendWorker(QThread):
                 if not self._escape_battle(): return
                 continue
 
-            d=self._enrich(p); d["attempt"]=attempt; d["source"]="Oak Challenge"; d["oak_target"]=True
-            d.update(self._rng_miss_fields(p,context="wild"))
-            self.encounter.emit(d)
+            d["oak_target"]=True
             if self._auto_capture(options, species_name(p.species)):
                 self.status.emit({"state":"CAPTURED","message":f"Oak target captured: {species_name(p.species)} — advancing Oak line progress.","attempt":attempt,"oak_target":True,"oak_captured":True,"species_id":int(p.species)})
                 self.stop_hunt_event.set()
