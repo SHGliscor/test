@@ -1302,6 +1302,29 @@ class BackendWorker(QThread):
             return True
         return False
 
+    def _spin_dpad_to_battle(self, hold=.045, settle=.055):
+        """Rotate in place using the physical D-pad buttons instead of the left stick."""
+        self.bot.set_stick("LEFT", 0, 0)
+        directions=("DUP", "DRIGHT", "DDOWN", "DLEFT")
+        pulse=max(.030,min(.070,float(hold)))
+        gap=max(.035,min(.090,float(settle)))
+
+        while not self.stop_hunt_event.is_set() and not self._is_in_battle():
+            for button in directions:
+                if self.stop_hunt_event.is_set() or self._is_in_battle():
+                    break
+                self.bot.click(button)
+                if not self._sleep(pulse):
+                    return False
+                if not self._sleep(gap):
+                    return False
+                if self._is_in_battle():
+                    break
+
+        if self._is_in_battle():
+            self._sleep(1.0)
+            return True
+        return False
     def _wiggle_to_battle(self):
         # Match the public FRLG routine more closely: keep one axis for the
         # whole search, then alternate axis only after a completed battle.
