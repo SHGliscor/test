@@ -425,20 +425,40 @@ class BackendWorker(QThread):
                 # screen. If the species was already registered, A may briefly
                 # open the nickname input; the following B cancels that input
                 # and the subsequent B declines the nickname normally.
-                # FRLG's new-species registration screen is a blocking
-                # display task.  The previous press/release sequence could
-                # arrive while that task was still taking control, leaving the
-                # bot parked on the Pokédex.  Use the same Koi click transport
-                # that is already proven throughout the rest of Auto Capture,
-                # and give the registration screen a full settling interval.
+                # FRLG post-capture text is a three-A sequence when a new
+                # species is added to the Pokedex:
+                #
+                #   A -> "Gotcha! <Pokemon> was caught!"
+                #   A -> "<Pokemon> data was added to the Pokedex."
+                #   A -> clear the Pokedex entry
+                #   B -> decline the nickname
+                #
+                # The first A timing is already hardware-proven in the current
+                # build, so keep that timing unchanged. The bug was that the
+                # flow only sent this first post-capture A and then sent B,
+                # leaving the bot parked on the Pokedex entry.
                 if not self._sleep(2.25):
                     return False
-                self.status.emit({"state":"CAPTURE_RESULT","message":f"Auto Capture: advancing {species_name(species)} Pokédex entry…"})
+                self.status.emit({"state":"CAPTURE_RESULT","message":f"Auto Capture: advancing catch message for {species_name(species)}…"})
                 self.bot.click("A")
+
+                # Advance the "data was added to the Pokedex" message.
                 if not self._sleep(1.75):
                     return False
-                self.status.emit({"state":"CAPTURE_RESULT","message":"Capture probe: nickname prompt — selecting NO…"})
-                self.log.emit("CAPTURE PROBE: nickname prompt YES; selecting NO with B")
+                self.status.emit({"state":"CAPTURE_RESULT","message":"Auto Capture: advancing Pokedex registration message…"})
+                self.bot.click("A")
+
+                # Clear the actual Pokedex entry before the nickname prompt.
+                if not self._sleep(1.75):
+                    return False
+                self.status.emit({"state":"CAPTURE_RESULT","message":"Auto Capture: clearing Pokedex entry…"})
+                self.bot.click("A")
+
+                # The game now asks whether to give the Pokemon a nickname.
+                if not self._sleep(1.00):
+                    return False
+                self.status.emit({"state":"CAPTURE_RESULT","message":"Capture flow: nickname prompt — selecting NO…"})
+                self.log.emit("CAPTURE PROBE: nickname prompt reached; selecting NO with B")
                 self.bot.click("B")
                 if not self._sleep(1.00):
                     return False
