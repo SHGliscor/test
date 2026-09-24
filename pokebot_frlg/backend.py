@@ -1436,10 +1436,12 @@ class BackendWorker(QThread):
         spin_settle=max(.02,min(.20,float(options.get("spin_settle",.055) or .055)))
         attempt=0
         while not self.stop_hunt_event.is_set():
-            movement_label="Spin" if self._wild_movement_mode=="spin" else "Wiggle"
+            movement_label={"spin":"Spin (Analog)","spin_dpad":"Spin (D-Pad)"}.get(self._wild_movement_mode,"Wiggle")
             self.status.emit({"state":"HUNTING","message":f"Searching for a wild encounter… ({movement_label})","attempt":attempt})
             if self._wild_movement_mode=="spin":
                 if not self._spin_to_battle(spin_hold,spin_settle): return
+            elif self._wild_movement_mode=="spin_dpad":
+                if not self._spin_dpad_to_battle(spin_hold,spin_settle): return
             else:
                 if not self._wiggle_to_battle(): return
             p=parse_pk3(self.bot.read_heap(self.off.wild_pokemon,BOX_FORMAT_SLOT_SIZE))
