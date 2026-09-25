@@ -1389,7 +1389,7 @@ class BackendWorker(QThread):
 
         return True
 
-    def _spin_to_battle(self, hold=.045, settle=.055):
+    # Spin restored to the pre-SysBot timing implementation; do not replace with fixed wiggle taps.\n    def _spin_to_battle(self, hold=.045, settle=.055):
         """Spin clockwise on one tile using live FRLG facing state."""
         self.bot.set_stick("LEFT", 0, 0)
         while not self.stop_hunt_event.is_set() and not self._is_in_battle():
