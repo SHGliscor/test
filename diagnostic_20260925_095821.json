@@ -1,0 +1,1647 @@
+{
+  "app": "PokebotSwitch-FRLG UI",
+  "timestamp": "2026-09-25T09:58:21",
+  "phase": "manual_export",
+  "manual_export": true,
+  "capture_backend_build": "v5-atomic-run-20260924",
+  "game": "LeafGreen",
+  "connected": true,
+  "hunting": false,
+  "display_is_off": false,
+  "battle_ram": {
+    "in_battle": 1,
+    "battle_menu": 1,
+    "overworld": 255,
+    "current_seed": 363352092
+  },
+  "party": [
+    {
+      "valid": true,
+      "checksum_ok": true,
+      "pid": 3810633742,
+      "tid": 34978,
+      "sid": 48423,
+      "shiny": false,
+      "shiny_xor": 32426,
+      "species": 120,
+      "held_item": 0,
+      "experience": 33750,
+      "friendship": 72,
+      "nature": "Quiet",
+      "ability_slot": 1,
+      "is_egg": false,
+      "pokerus": 0,
+      "iv_hp": 25,
+      "iv_atk": 19,
+      "iv_def": 6,
+      "iv_spe": 11,
+      "iv_spa": 2,
+      "iv_spd": 21,
+      "ev_hp": 0,
+      "ev_atk": 0,
+      "ev_def": 0,
+      "ev_spe": 0,
+      "ev_spa": 0,
+      "ev_spd": 0,
+      "move1": 105,
+      "move2": 293,
+      "move3": 129,
+      "move4": 61,
+      "move1_pp": 20,
+      "move2_pp": 20,
+      "move3_pp": 20,
+      "move4_pp": 20,
+      "raw_hex": "0EA821E3A28827BDCDCEBBCCD3CFFF001D000202CCE3BDFFFFFFFF00FEDD0000AC20987CD5BA2374AC20065EAC20065EAC20065EAC20065ED420065E7AA3065EAC68065EC520235F2D203B5EB834124A",
+      "iv_sum": 84,
+      "iv_spread": "25/19/6/2/21/11",
+      "ev_spread": "0/0/0/0/0/0",
+      "name": "Staryu",
+      "ability_name": "Illuminate",
+      "sprite_path": "C:\\Users\\roger\\AppData\\Roaming\\PokebotSwitch-FRLG\\cache\\sprites\\120_normal.png"
+    },
+    {
+      "valid": true,
+      "checksum_ok": true,
+      "pid": 50553744,
+      "tid": 50538,
+      "sid": 42493,
+      "shiny": true,
+      "shiny_xor": 4,
+      "species": 19,
+      "held_item": 0,
+      "experience": 27,
+      "friendship": 71,
+      "nature": "Rash",
+      "ability_slot": 1,
+      "is_egg": false,
+      "pokerus": 0,
+      "iv_hp": 6,
+      "iv_atk": 31,
+      "iv_def": 26,
+      "iv_spe": 0,
+      "iv_spa": 5,
+      "iv_spd": 24,
+      "ev_hp": 0,
+      "ev_atk": 0,
+      "ev_def": 0,
+      "ev_spe": 0,
+      "ev_spa": 0,
+      "ev_spd": 0,
+      "move1": 33,
+      "move2": 39,
+      "move3": 0,
+      "move4": 0,
+      "move1_pp": 35,
+      "move2_pp": 30,
+      "move3_pp": 0,
+      "move4_pp": 0,
+      "raw_hex": "906303036AC5FDA5CCBBCECEBBCEBBFF04000202BBE9E6E3E6D5FF0052F90000E9A6FEA6E1A6FEA6FAE1FEA6DBA6D9A6FAA6FEA6D9B8FEA6FAA6FEA6FAA6FEA6FAA6FEA6FAC37D341CCDAE96FAA6FEA6",
+      "iv_sum": 92,
+      "iv_spread": "6/31/26/5/24/0",
+      "ev_spread": "0/0/0/0/0/0",
+      "name": "Rattata",
+      "ability_name": "Run Away",
+      "sprite_path": "C:\\Users\\roger\\AppData\\Roaming\\PokebotSwitch-FRLG\\cache\\sprites\\19_shiny.png"
+    },
+    {
+      "valid": true,
+      "checksum_ok": true,
+      "pid": 617235551,
+      "tid": 50538,
+      "sid": 42493,
+      "shiny": true,
+      "shiny_xor": 2,
+      "species": 7,
+      "held_item": 0,
+      "experience": 158,
+      "friendship": 73,
+      "nature": "Lonely",
+      "ability_slot": 1,
+      "is_egg": false,
+      "pokerus": 0,
+      "iv_hp": 1,
+      "iv_atk": 2,
+      "iv_def": 19,
+      "iv_spe": 9,
+      "iv_spa": 4,
+      "iv_spd": 29,
+      "ev_hp": 0,
+      "ev_atk": 0,
+      "ev_def": 0,
+      "ev_spe": 1,
+      "ev_spa": 0,
+      "ev_spd": 0,
+      "move1": 33,
+      "move2": 39,
+      "move3": 0,
+      "move4": 0,
+      "move1_pp": 35,
+      "move2_pp": 30,
+      "move3_pp": 0,
+      "move4_pp": 0,
+      "raw_hex": "5F44CA246AC5FDA5CDCBCFC3CCCEC6BFFF740202BBE9E6E3E6D5FF001A6A000035D9B223744D73BB358137813581378035813781358137811481108135813781169F378132813781AB81378135C83781",
+      "iv_sum": 64,
+      "iv_spread": "1/2/19/4/29/9",
+      "ev_spread": "0/0/0/0/0/1",
+      "name": "Squirtle",
+      "ability_name": "Torrent",
+      "sprite_path": "C:\\Users\\roger\\AppData\\Roaming\\PokebotSwitch-FRLG\\cache\\sprites\\7_shiny.png"
+    },
+    {
+      "valid": false,
+      "checksum_ok": true,
+      "pid": 0,
+      "tid": 0,
+      "sid": 0,
+      "shiny": true,
+      "shiny_xor": 0,
+      "species": 0,
+      "held_item": 0,
+      "experience": 0,
+      "friendship": 0,
+      "nature": "Hardy",
+      "ability_slot": 1,
+      "is_egg": false,
+      "pokerus": 0,
+      "iv_hp": 0,
+      "iv_atk": 0,
+      "iv_def": 0,
+      "iv_spe": 0,
+      "iv_spa": 0,
+      "iv_spd": 0,
+      "ev_hp": 0,
+      "ev_atk": 0,
+      "ev_def": 0,
+      "ev_spe": 0,
+      "ev_spa": 0,
+      "ev_spd": 0,
+      "move1": 0,
+      "move2": 0,
+      "move3": 0,
+      "move4": 0,
+      "move1_pp": 0,
+      "move2_pp": 0,
+      "move3_pp": 0,
+      "move4_pp": 0,
+      "raw_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "iv_sum": 0,
+      "iv_spread": "0/0/0/0/0/0",
+      "ev_spread": "0/0/0/0/0/0",
+      "name": "Species 0"
+    },
+    {
+      "valid": false,
+      "checksum_ok": true,
+      "pid": 0,
+      "tid": 0,
+      "sid": 0,
+      "shiny": true,
+      "shiny_xor": 0,
+      "species": 0,
+      "held_item": 0,
+      "experience": 0,
+      "friendship": 0,
+      "nature": "Hardy",
+      "ability_slot": 1,
+      "is_egg": false,
+      "pokerus": 0,
+      "iv_hp": 0,
+      "iv_atk": 0,
+      "iv_def": 0,
+      "iv_spe": 0,
+      "iv_spa": 0,
+      "iv_spd": 0,
+      "ev_hp": 0,
+      "ev_atk": 0,
+      "ev_def": 0,
+      "ev_spe": 0,
+      "ev_spa": 0,
+      "ev_spd": 0,
+      "move1": 0,
+      "move2": 0,
+      "move3": 0,
+      "move4": 0,
+      "move1_pp": 0,
+      "move2_pp": 0,
+      "move3_pp": 0,
+      "move4_pp": 0,
+      "raw_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "iv_sum": 0,
+      "iv_spread": "0/0/0/0/0/0",
+      "ev_spread": "0/0/0/0/0/0",
+      "name": "Species 0"
+    },
+    {
+      "valid": false,
+      "checksum_ok": true,
+      "pid": 0,
+      "tid": 0,
+      "sid": 0,
+      "shiny": true,
+      "shiny_xor": 0,
+      "species": 0,
+      "held_item": 0,
+      "experience": 0,
+      "friendship": 0,
+      "nature": "Hardy",
+      "ability_slot": 1,
+      "is_egg": false,
+      "pokerus": 0,
+      "iv_hp": 0,
+      "iv_atk": 0,
+      "iv_def": 0,
+      "iv_spe": 0,
+      "iv_spa": 0,
+      "iv_spd": 0,
+      "ev_hp": 0,
+      "ev_atk": 0,
+      "ev_def": 0,
+      "ev_spe": 0,
+      "ev_spa": 0,
+      "ev_spd": 0,
+      "move1": 0,
+      "move2": 0,
+      "move3": 0,
+      "move4": 0,
+      "move1_pp": 0,
+      "move2_pp": 0,
+      "move3_pp": 0,
+      "move4_pp": 0,
+      "raw_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "iv_sum": 0,
+      "iv_spread": "0/0/0/0/0/0",
+      "ev_spread": "0/0/0/0/0/0",
+      "name": "Species 0"
+    }
+  ],
+  "command_log": [
+    {
+      "t": 1790326678.04,
+      "command": "getTitleID"
+    },
+    {
+      "t": 1790326678.056,
+      "command": "game version"
+    },
+    {
+      "t": 1790326678.106,
+      "command": "getVersion"
+    },
+    {
+      "t": 1790326678.115,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326678.146,
+      "command": "peek 0x120C2E4 80"
+    },
+    {
+      "t": 1790326678.159,
+      "command": "peek 0x120C348 80"
+    },
+    {
+      "t": 1790326678.17,
+      "command": "peek 0x120C3AC 80"
+    },
+    {
+      "t": 1790326678.179,
+      "command": "peek 0x120C410 80"
+    },
+    {
+      "t": 1790326678.202,
+      "command": "peek 0x120C474 80"
+    },
+    {
+      "t": 1790326678.211,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326678.234,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326678.25,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326678.269,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326678.278,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326678.287,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326678.866,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326678.873,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326678.883,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326679.071,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326679.083,
+      "command": "peek 0x120C2E4 80"
+    },
+    {
+      "t": 1790326679.096,
+      "command": "peek 0x120C348 80"
+    },
+    {
+      "t": 1790326679.106,
+      "command": "peek 0x120C3AC 80"
+    },
+    {
+      "t": 1790326679.115,
+      "command": "peek 0x120C410 80"
+    },
+    {
+      "t": 1790326679.123,
+      "command": "peek 0x120C474 80"
+    },
+    {
+      "t": 1790326679.133,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326679.142,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326679.151,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326679.452,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326679.853,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326679.863,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326679.958,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326679.969,
+      "command": "peek 0x120C2E4 80"
+    },
+    {
+      "t": 1790326679.982,
+      "command": "peek 0x120C348 80"
+    },
+    {
+      "t": 1790326679.992,
+      "command": "peek 0x120C3AC 80"
+    },
+    {
+      "t": 1790326680.188,
+      "command": "peek 0x120C410 80"
+    },
+    {
+      "t": 1790326680.195,
+      "command": "peek 0x120C474 80"
+    },
+    {
+      "t": 1790326680.463,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326680.475,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326680.483,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326680.499,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326680.525,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326680.535,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326681.115,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326681.147,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326681.155,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326681.258,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326681.42,
+      "command": "peek 0x120C2E4 80"
+    },
+    {
+      "t": 1790326681.574,
+      "command": "peek 0x120C348 80"
+    },
+    {
+      "t": 1790326681.585,
+      "command": "peek 0x120C3AC 80"
+    },
+    {
+      "t": 1790326681.598,
+      "command": "peek 0x120C410 80"
+    },
+    {
+      "t": 1790326681.607,
+      "command": "peek 0x120C474 80"
+    },
+    {
+      "t": 1790326681.618,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326681.63,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326681.695,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326681.706,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326681.716,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326681.725,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326682.302,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326682.309,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326682.318,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326682.509,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326682.63,
+      "command": "peek 0x120C2E4 80"
+    },
+    {
+      "t": 1790326682.645,
+      "command": "peek 0x120C348 80"
+    },
+    {
+      "t": 1790326682.658,
+      "command": "peek 0x120C3AC 80"
+    },
+    {
+      "t": 1790326682.834,
+      "command": "peek 0x120C410 80"
+    },
+    {
+      "t": 1790326682.843,
+      "command": "peek 0x120C474 80"
+    },
+    {
+      "t": 1790326682.852,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326682.916,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326682.925,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326682.937,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326682.948,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326682.956,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326683.539,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326683.549,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326683.558,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326683.759,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326683.86,
+      "command": "peek 0x120C2E4 80"
+    },
+    {
+      "t": 1790326683.871,
+      "command": "peek 0x120C348 80"
+    },
+    {
+      "t": 1790326683.884,
+      "command": "peek 0x120C3AC 80"
+    },
+    {
+      "t": 1790326684.055,
+      "command": "peek 0x120C410 80"
+    },
+    {
+      "t": 1790326684.066,
+      "command": "peek 0x120C474 80"
+    },
+    {
+      "t": 1790326684.075,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326684.153,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326684.163,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326684.173,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326684.181,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326684.19,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326684.758,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326684.767,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326684.777,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326684.967,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326685.089,
+      "command": "peek 0x120C2E4 80"
+    },
+    {
+      "t": 1790326685.098,
+      "command": "peek 0x120C348 80"
+    },
+    {
+      "t": 1790326685.113,
+      "command": "peek 0x120C3AC 80"
+    },
+    {
+      "t": 1790326685.19,
+      "command": "peek 0x120C410 80"
+    },
+    {
+      "t": 1790326685.201,
+      "command": "peek 0x120C474 80"
+    },
+    {
+      "t": 1790326685.223,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326685.238,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326685.254,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326685.348,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326685.364,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326685.38,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326685.955,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326686.025,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326686.035,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326686.13,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326686.147,
+      "command": "peek 0x120C2E4 80"
+    },
+    {
+      "t": 1790326686.164,
+      "command": "peek 0x120C348 80"
+    },
+    {
+      "t": 1790326686.241,
+      "command": "peek 0x120C3AC 80"
+    },
+    {
+      "t": 1790326686.25,
+      "command": "peek 0x120C410 80"
+    },
+    {
+      "t": 1790326686.259,
+      "command": "peek 0x120C474 80"
+    },
+    {
+      "t": 1790326686.267,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326686.288,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326686.305,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326686.589,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326686.64,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326686.851,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326687.146,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326687.257,
+      "command": "peek 0x120C2E4 80"
+    },
+    {
+      "t": 1790326687.383,
+      "command": "peek 0x120C348 80"
+    },
+    {
+      "t": 1790326687.394,
+      "command": "peek 0x120C3AC 80"
+    },
+    {
+      "t": 1790326687.508,
+      "command": "peek 0x120C410 80"
+    },
+    {
+      "t": 1790326687.517,
+      "command": "peek 0x120C474 80"
+    },
+    {
+      "t": 1790326687.527,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326687.544,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326687.56,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326687.578,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326687.592,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326687.604,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326688.398,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326688.485,
+      "command": "peek 0x120C2E4 80"
+    },
+    {
+      "t": 1790326688.612,
+      "command": "peek 0x120C348 80"
+    },
+    {
+      "t": 1790326688.625,
+      "command": "peek 0x120C3AC 80"
+    },
+    {
+      "t": 1790326688.689,
+      "command": "peek 0x120C410 80"
+    },
+    {
+      "t": 1790326688.7,
+      "command": "peek 0x120C474 80"
+    },
+    {
+      "t": 1790326688.709,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326688.731,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326688.746,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326688.759,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326688.769,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326688.778,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326689.329,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326689.344,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326689.352,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326689.525,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326689.622,
+      "command": "peek 0x120C2E4 80"
+    },
+    {
+      "t": 1790326689.634,
+      "command": "peek 0x120C348 80"
+    },
+    {
+      "t": 1790326689.645,
+      "command": "peek 0x120C3AC 80"
+    },
+    {
+      "t": 1790326689.704,
+      "command": "peek 0x120C410 80"
+    },
+    {
+      "t": 1790326689.715,
+      "command": "peek 0x120C474 80"
+    },
+    {
+      "t": 1790326689.911,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326689.935,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326689.95,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326689.968,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326689.981,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326689.992,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326690.603,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326690.613,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326690.622,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326690.813,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326690.853,
+      "command": "peek 0x120C2E4 80"
+    },
+    {
+      "t": 1790326690.863,
+      "command": "peek 0x120C348 80"
+    },
+    {
+      "t": 1790326690.876,
+      "command": "peek 0x120C3AC 80"
+    },
+    {
+      "t": 1790326690.947,
+      "command": "peek 0x120C410 80"
+    },
+    {
+      "t": 1790326691.138,
+      "command": "peek 0x120C474 80"
+    },
+    {
+      "t": 1790326691.151,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326691.173,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326691.183,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326691.194,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326691.203,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326691.217,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326691.807,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326691.817,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326691.826,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326692.014,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326692.026,
+      "command": "peek 0x120C2E4 80"
+    },
+    {
+      "t": 1790326692.036,
+      "command": "peek 0x120C348 80"
+    },
+    {
+      "t": 1790326692.047,
+      "command": "peek 0x120C3AC 80"
+    },
+    {
+      "t": 1790326692.057,
+      "command": "peek 0x120C410 80"
+    },
+    {
+      "t": 1790326692.067,
+      "command": "peek 0x120C474 80"
+    },
+    {
+      "t": 1790326692.078,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326692.095,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326692.112,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326692.413,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326692.422,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326692.433,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326692.89,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326692.904,
+      "command": "peek 0x120C2E4 80"
+    },
+    {
+      "t": 1790326692.913,
+      "command": "peek 0x120C348 80"
+    },
+    {
+      "t": 1790326692.923,
+      "command": "peek 0x120C3AC 80"
+    },
+    {
+      "t": 1790326692.933,
+      "command": "peek 0x120C410 80"
+    },
+    {
+      "t": 1790326692.942,
+      "command": "peek 0x120C474 80"
+    },
+    {
+      "t": 1790326692.952,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326692.97,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326692.986,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326692.997,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326693.006,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326693.018,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326693.501,
+      "command": "detachController"
+    },
+    {
+      "t": 1790326694.252,
+      "command": "setStick LEFT 0 0"
+    },
+    {
+      "t": 1790326694.252,
+      "command": "setStick RIGHT 0 0"
+    },
+    {
+      "t": 1790326694.503,
+      "command": "setStick LEFT 0 0"
+    },
+    {
+      "t": 1790326694.505,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790326694.621,
+      "command": "peek 0x123F078 6"
+    },
+    {
+      "t": 1790326694.631,
+      "command": "peek 0x123EE38 36"
+    },
+    {
+      "t": 1790326694.641,
+      "command": "peek 0x123EE38 36"
+    },
+    {
+      "t": 1790326694.651,
+      "command": "peek 0x123EE5C 36"
+    },
+    {
+      "t": 1790326694.66,
+      "command": "peek 0x123EE80 36"
+    },
+    {
+      "t": 1790326694.669,
+      "command": "peek 0x123EEA4 36"
+    },
+    {
+      "t": 1790326694.684,
+      "command": "peek 0x123EEC8 36"
+    },
+    {
+      "t": 1790326694.7,
+      "command": "peek 0x123EEEC 36"
+    },
+    {
+      "t": 1790326694.712,
+      "command": "peek 0x123EF10 36"
+    },
+    {
+      "t": 1790326694.721,
+      "command": "peek 0x123EF34 36"
+    },
+    {
+      "t": 1790326694.73,
+      "command": "peek 0x123EF58 36"
+    },
+    {
+      "t": 1790326694.738,
+      "command": "peek 0x123EF7C 36"
+    },
+    {
+      "t": 1790326694.746,
+      "command": "peek 0x123EFA0 36"
+    },
+    {
+      "t": 1790326694.755,
+      "command": "peek 0x123EFC4 36"
+    },
+    {
+      "t": 1790326694.766,
+      "command": "peek 0x123EFE8 36"
+    },
+    {
+      "t": 1790326694.775,
+      "command": "peek 0x123F00C 36"
+    },
+    {
+      "t": 1790326694.785,
+      "command": "peek 0x123F030 36"
+    },
+    {
+      "t": 1790326694.793,
+      "command": "peek 0x123F054 36"
+    },
+    {
+      "t": 1790326694.802,
+      "command": "setStick LEFT 0 0"
+    },
+    {
+      "t": 1790326694.803,
+      "command": "setStick RIGHT 0 0"
+    },
+    {
+      "t": 1790326694.803,
+      "command": "detachController"
+    },
+    {
+      "t": 1790326694.803,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326694.919,
+      "command": "peek 0x120C2E4 80"
+    },
+    {
+      "t": 1790326694.929,
+      "command": "peek 0x120C348 80"
+    },
+    {
+      "t": 1790326694.941,
+      "command": "peek 0x120C3AC 80"
+    },
+    {
+      "t": 1790326694.951,
+      "command": "peek 0x120C410 80"
+    },
+    {
+      "t": 1790326694.959,
+      "command": "peek 0x120C474 80"
+    },
+    {
+      "t": 1790326694.968,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326694.984,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326695.0,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326695.02,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326695.032,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326695.047,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326695.606,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326695.617,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326695.626,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326695.803,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326695.814,
+      "command": "peek 0x120C2E4 80"
+    },
+    {
+      "t": 1790326695.825,
+      "command": "peek 0x120C348 80"
+    },
+    {
+      "t": 1790326695.836,
+      "command": "peek 0x120C3AC 80"
+    },
+    {
+      "t": 1790326695.846,
+      "command": "peek 0x120C410 80"
+    },
+    {
+      "t": 1790326695.855,
+      "command": "peek 0x120C474 80"
+    },
+    {
+      "t": 1790326695.867,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326695.883,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326695.899,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326696.171,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326696.182,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326696.191,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326696.731,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326696.743,
+      "command": "peek 0x120C2E4 80"
+    },
+    {
+      "t": 1790326696.754,
+      "command": "peek 0x120C348 80"
+    },
+    {
+      "t": 1790326696.767,
+      "command": "peek 0x120C3AC 80"
+    },
+    {
+      "t": 1790326696.777,
+      "command": "peek 0x120C410 80"
+    },
+    {
+      "t": 1790326696.786,
+      "command": "peek 0x120C474 80"
+    },
+    {
+      "t": 1790326696.796,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326696.811,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326696.827,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326696.841,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326696.857,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326696.875,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326697.42,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326697.429,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326697.438,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326697.625,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326697.637,
+      "command": "peek 0x120C2E4 80"
+    },
+    {
+      "t": 1790326697.648,
+      "command": "peek 0x120C348 80"
+    },
+    {
+      "t": 1790326697.662,
+      "command": "peek 0x120C3AC 80"
+    },
+    {
+      "t": 1790326697.672,
+      "command": "peek 0x120C410 80"
+    },
+    {
+      "t": 1790326697.683,
+      "command": "peek 0x120C474 80"
+    },
+    {
+      "t": 1790326697.694,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326697.704,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326697.724,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326698.024,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326698.033,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326698.042,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326698.488,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326698.5,
+      "command": "peek 0x120C2E4 80"
+    },
+    {
+      "t": 1790326698.51,
+      "command": "peek 0x120C348 80"
+    },
+    {
+      "t": 1790326698.521,
+      "command": "peek 0x120C3AC 80"
+    },
+    {
+      "t": 1790326698.531,
+      "command": "peek 0x120C410 80"
+    },
+    {
+      "t": 1790326698.541,
+      "command": "peek 0x120C474 80"
+    },
+    {
+      "t": 1790326698.55,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326698.567,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326698.583,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326698.6,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326698.611,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326698.626,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326699.206,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326699.217,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326699.226,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326699.413,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326699.425,
+      "command": "peek 0x120C2E4 80"
+    },
+    {
+      "t": 1790326699.435,
+      "command": "peek 0x120C348 80"
+    },
+    {
+      "t": 1790326699.445,
+      "command": "peek 0x120C3AC 80"
+    },
+    {
+      "t": 1790326699.455,
+      "command": "peek 0x120C410 80"
+    },
+    {
+      "t": 1790326699.463,
+      "command": "peek 0x120C474 80"
+    },
+    {
+      "t": 1790326699.473,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326699.493,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326699.508,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326699.794,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326699.803,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326699.812,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326700.272,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326700.285,
+      "command": "peek 0x120C2E4 80"
+    },
+    {
+      "t": 1790326700.296,
+      "command": "peek 0x120C348 80"
+    },
+    {
+      "t": 1790326700.307,
+      "command": "peek 0x120C3AC 80"
+    },
+    {
+      "t": 1790326700.318,
+      "command": "peek 0x120C410 80"
+    },
+    {
+      "t": 1790326700.327,
+      "command": "peek 0x120C474 80"
+    },
+    {
+      "t": 1790326700.336,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326700.353,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326700.368,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326700.386,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326700.394,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326700.402,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326700.944,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326700.954,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326700.963,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326701.166,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326701.178,
+      "command": "peek 0x120C2E4 80"
+    },
+    {
+      "t": 1790326701.19,
+      "command": "peek 0x120C348 80"
+    },
+    {
+      "t": 1790326701.205,
+      "command": "peek 0x120C3AC 80"
+    },
+    {
+      "t": 1790326701.215,
+      "command": "peek 0x120C410 80"
+    },
+    {
+      "t": 1790326701.224,
+      "command": "peek 0x120C474 80"
+    },
+    {
+      "t": 1790326701.235,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326701.246,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326701.254,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326701.532,
+      "command": "peek 0xBD68D2D8 4"
+    },
+    {
+      "t": 1790326701.545,
+      "command": "peek 0x120E50C 1"
+    },
+    {
+      "t": 1790326701.555,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326701.809,
+      "command": "peek 0x120C280 80"
+    },
+    {
+      "t": 1790326701.82,
+      "command": "peek 0x120C2E4 80"
+    },
+    {
+      "t": 1790326701.833,
+      "command": "peek 0x120C348 80"
+    },
+    {
+      "t": 1790326701.846,
+      "command": "peek 0x120C3AC 80"
+    },
+    {
+      "t": 1790326701.856,
+      "command": "peek 0x120C410 80"
+    },
+    {
+      "t": 1790326701.866,
+      "command": "peek 0x120C474 80"
+    },
+    {
+      "t": 1790326701.875,
+      "command": "peek 0x6D9C91 1"
+    },
+    {
+      "t": 1790326701.884,
+      "command": "peek 0x11F6FF7 1"
+    },
+    {
+      "t": 1790326701.895,
+      "command": "peek 0x1222BDC 1"
+    },
+    {
+      "t": 1790326701.904,
+      "command": "peek 0xBD68D2D0 4"
+    }
+  ]
+}
