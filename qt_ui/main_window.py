@@ -478,6 +478,12 @@ class MainWindow(QMainWindow):
         l.addWidget(QLabel("Support ZIP path:"))
         l.addWidget(self.support_label)
         row=QHBoxLayout()
+        spinb=QPushButton("Export Spin Diagnostic JSON")
+        spinb.setToolTip(
+            "Read the live player/ObjectEvent RAM snapshot without sending any controller input. "
+            "Use this while standing still; turn the character manually before taking another snapshot."
+        )
+        spinb.clicked.connect(self.export_spin_diagnostic)
         exportb=QPushButton("Export Support ZIP")
         exportb.setToolTip(
             "Build a small diagnostic ZIP now (settings/session/stats + live RAM snapshot). "
@@ -485,9 +491,17 @@ class MainWindow(QMainWindow):
         )
         exportb.clicked.connect(self.export_support_zip)
         openb=QPushButton("Open AppData Folder"); openb.clicked.connect(self.open_appdata)
-        row.addWidget(exportb); row.addWidget(openb); row.addStretch(1)
+        row.addWidget(spinb); row.addWidget(exportb); row.addWidget(openb); row.addStretch(1)
         l.addLayout(row)
         v.addWidget(c); v.addStretch(); self.tabs.addTab(w,"TESTING / SUPPORT")
+
+    def export_spin_diagnostic(self):
+        """Ask the backend for a read-only Spin RAM snapshot."""
+        try:
+            self.worker.request_export_spin_diagnostic()
+            self.log_label.setText("Exporting Spin diagnostic JSON…")
+        except Exception as exc:
+            self.log_label.setText(f"Spin diagnostic failed to start: {exc}")
 
     def export_support_zip(self):
         """Ask the backend worker for a manual diagnostic ZIP."""
