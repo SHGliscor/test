@@ -1252,54 +1252,59 @@ class BackendWorker(QThread):
     def _run_static(self,h,options): self._run_static_common(h,"A",options)
     def _run_static_hooh(self,h,options): self._run_static_common(h,"DUP",options)
 
-    def _read_spin_avatar(self):
-        """Read FRLG player ObjectEvent data for Spin diagnostics.
+    def _spin_diagnostic_snapshot(self):
+        """Read-only Spin structure snapshot for support exports.
 
-        Do not assume the active ObjectEvent ID is valid until we have seen
-        the actual Switch FRLG structure. When facing is unknown, dump the
-        avatar bytes and all 16 ObjectEvent headers so the correct player
-        entry/field can be identified from one run.
+        This records the actual RAM bytes returned by Koi, rather than only
+        recording the fact that a peek command was issued. It never sends
+        controller input.
         """
         avatar = self.bot.read_heap(PLAYER_AVATAR, 6)
-        object_id = avatar[5]
+        object_id = int(avatar[5])
 
-        def decode_entry(index, obj):
-            facing18 = obj[0x18]
-            facing20 = obj[0x20]
-            x = int.from_bytes(obj[0x10:0x12], "little")
-            y = int.from_bytes(obj[0x12:0x14], "little")
-            return (
-                f"obj[{index:02d}] id?={obj[0]:02X} "
-                f"xy=({x},{y}) +18={facing18:02X} +20={facing20:02X} "
-                f"head={obj[:8].hex()}"
-            )
+        entries = []
+        for index in range(16):
+            obj = self.bot.read_heap(OBJECT_EVENTS + index * 0x24, 0x24)
+            entries.append({
+                "index": index,
+                "address": f"0x{OBJECT_EVENTS + index * 0x24:X}",
+                "raw_hex": obj.hex(),
+                "byte_00": int(obj[0]),
+                "byte_01": int(obj[1]),
+                "x_10": int.from_bytes(obj[0x10:0x12], "little"),
+                "y_12": int.from_bytes(obj[0x12:0x14], "little"),
+                "byte_18": int(obj[0x18]),
+                "byte_20": int(obj[0x20]),
+            })
+
+        return {
+            "player_avatar_address": f"0x{PLAYER_AVATAR:X}",
+            "object_events_address": f"0x{OBJECT_EVENTS:X}",
+            "avatar_raw_hex": avatar.hex(),
+            "active_object_id": object_id,
+            "object_events": entries,
+        }
+
+    def _read_spin_avatar(self):
+        """Read FRLG player ObjectEvent data for Spin, with a hard safety guard."""
+        diag = self._spin_diagnostic_snapshot()
+        object_id = diag["active_object_id"]
 
         if object_id < 16:
-            obj = self.bot.read_heap(OBJECT_EVENTS + object_id * 0x24, 0x24)
-            facing_byte = obj[0x18]
+            obj = diag["object_events"][object_id]
+            facing_byte = obj["byte_18"]
             facing = facing_byte & 0x0F
             facing_name = {1: "Up", 2: "Down", 3: "Left", 4: "Right"}.get(facing)
 
             if facing_name is not None:
-                x = int.from_bytes(obj[0x10:0x12], "little")
-                y = int.from_bytes(obj[0x12:0x14], "little")
-                return facing_name, (x, y)
-
-        # One-shot diagnostic dump. This deliberately raises so Spin cannot
-        # send any movement input while the structure is unidentified.
-        lines = [
-            f"SPIN DIAG: PLAYER_AVATAR=0x{PLAYER_AVATAR:X}",
-            f"SPIN DIAG: OBJECT_EVENTS=0x{OBJECT_EVENTS:X}",
-            f"SPIN DIAG: avatar={avatar.hex()} active_id=0x{object_id:02X}",
-        ]
-
-        for index in range(16):
-            entry = self.bot.read_heap(OBJECT_EVENTS + index * 0x24, 0x24)
-            lines.append(decode_entry(index, entry))
+                return facing_name, (obj["x_10"], obj["y_12"])
 
         raise RuntimeError(
             "Spin safety: player ObjectEvent/facing not identified. "
-            + " | ".join(lines)
+            f"PLAYER_AVATAR=0x{PLAYER_AVATAR:X} "
+            f"OBJECT_EVENTS=0x{OBJECT_EVENTS:X} "
+            f"avatar={diag['avatar_raw_hex']} active_id=0x{object_id:02X} "
+            f"events={json.dumps(diag['object_events'], separators=(',', ':'))}"
         )
 
     @staticmethod
@@ -1727,6 +1732,7 @@ class BackendWorker(QThread):
                 party = [{"error": str(exc)}]
 
             battle = {}
+            spin_diagnostic = None
             try:
                 if self.connected and self.bot and self.off:
                     battle = {
@@ -1740,6 +1746,12 @@ class BackendWorker(QThread):
             except Exception as exc:
                 battle = {"error": str(exc)}
 
+            try:
+                if self.connected and self.bot and self.off:
+                    spin_diagnostic = self._spin_diagnostic_snapshot()
+            except Exception as exc:
+                spin_diagnostic = {"error": str(exc)}
+
             rec = {
                 "app": "PokebotSwitch-FRLG UI",
                 "timestamp": datetime.now().isoformat(timespec="seconds"),
@@ -1751,6 +1763,7 @@ class BackendWorker(QThread):
                 "hunting": bool(self.hunting),
                 "display_is_off": bool(self.display_is_off),
                 "battle_ram": battle,
+                "spin_diagnostic": spin_diagnostic,
                 "party": party,
                 "command_log": list(self.bot.command_log) if self.bot else [],
             }
