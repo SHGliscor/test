@@ -3,7 +3,8 @@ import queue, threading, time, traceback, json, zipfile, random
 from datetime import datetime
 from PySide6.QtCore import QThread, Signal
 from .offsets import (BATTLE_MENU, BOX_FORMAT_SLOT_SIZE, FRLG_GAME_VERSION, IN_BATTLE,
-                      PARTY_SLOT_STRIDE, INITIAL_SEED, LARGE_SHIFT, SMALL_SHIFT, lookup)
+                      PARTY_SLOT_STRIDE, INITIAL_SEED, LARGE_SHIFT, SMALL_SHIFT,
+                      PLAYER_AVATAR, OBJECT_EVENTS, lookup)
 from .pk3 import parse_pk3, species_name, NATURES
 from .wifi_botbase import WiFiBotbase
 from .appdata_store import appdata_root
@@ -1251,53 +1252,115 @@ class BackendWorker(QThread):
     def _run_static(self,h,options): self._run_static_common(h,"A",options)
     def _run_static_hooh(self,h,options): self._run_static_common(h,"DUP",options)
 
-    def _stick_tap(self,x,y,hold=.085,settle=.105):
-        # Switch FRLG standalone wrapper: use the left stick for emulated GBA
-        # directional movement. This avoids the D-pad path that opened the
-        # in-game START menu on hardware during the first wild-engine test.
-        self.bot.set_stick("LEFT",int(x),int(y))
-        if not self._sleep(hold):
-            self.bot.set_stick("LEFT",0,0); return False
-        self.bot.set_stick("LEFT",0,0)
-        return self._sleep(settle)
+    def _read_spin_avatar(self):
+        """Read the live FRLG player facing and current tile.
+
+        FRLG's gObjectEvents array is at GBA 0x02036E38 and each ObjectEvent
+        is 0x24 bytes. gPlayerAvatar is immediately after that array at
+        0x02037078; byte +5 is the active object-event ID. The facing byte in
+        the selected ObjectEvent is +0x20.
+        """
+        avatar = self.bot.read_heap(PLAYER_AVATAR, 6)
+        object_id = avatar[5]
+        if object_id >= 16:
+            raise RuntimeError(f"Spin safety: invalid player object-event id 0x{object_id:02X}")
+        obj = self.bot.read_heap(OBJECT_EVENTS + object_id * 0x24, 0x24)
+        facing = obj[0x20]
+        facing_name = {
+            0x11: "Down",
+            0x22: "Up",
+            0x33: "Left",
+            0x44: "Right",
+        }.get(facing)
+        if facing_name is None:
+            raise RuntimeError(f"Spin safety: unknown player facing byte 0x{facing:02X}")
+        x = int.from_bytes(obj[0x14:0x16], "little")
+        y = int.from_bytes(obj[0x16:0x18], "little")
+        return facing_name, (x, y)
+
+    @staticmethod
+    def _spin_next_direction(facing):
+        clockwise = ("Up", "Right", "Down", "Left")
+        return clockwise[(clockwise.index(facing) + 1) % 4]
+
+    @staticmethod
+    def _spin_input(direction):
+        return {
+            "Up": ("DUP", 0, 0x7FFF),
+            "Right": ("DRIGHT", 0x7FFF, 0),
+            "Down": ("DDOWN", 0, -0x8000),
+            "Left": ("DLEFT", -0x8000, 0),
+        }[direction]
+
+    def _spin_turn_pulse(self, mode):
+        """Make exactly one *turn* input, not a movement input.
+
+        The critical difference from the old Spin implementation is that we
+        do NOT send a fixed Up/Right/Down/Left pattern. In FRLG a directional
+        input equal to the current facing direction moves the player; an input
+        in a different direction first enters TURN_DIRECTION and only changes
+        facing. Therefore every pulse is selected from the live facing byte.
+
+        For D-pad mode press/release are sent back-to-back rather than using
+        click(), whose normal botbase click duration is long enough to become
+        a step. Analog mode likewise sends setStick followed immediately by
+        neutral instead of holding the stick for tens of milliseconds.
+        """
+        facing, before_pos = self._read_spin_avatar()
+        target = self._spin_next_direction(facing)
+        button, x, y = self._spin_input(target)
+
+        if mode == "spin_dpad":
+            self.bot.press(button)
+            self.bot.release(button)
+        else:
+            self.bot.set_stick("LEFT", x, y)
+            self.bot.set_stick("LEFT", 0, 0)
+
+        # Allow the game one/two frames to consume the turn, then verify that
+        # the facing changed without the tile changing.
+        if not self._sleep(.035):
+            return False
+        after_facing, after_pos = self._read_spin_avatar()
+
+        if after_pos != before_pos:
+            raise RuntimeError(
+                f"Spin safety hold: movement detected {before_pos} -> {after_pos} "
+                f"while turning {facing} -> {target}. Spin stopped before continuing."
+            )
+
+        if after_facing != target:
+            # The command may have landed between frames. Give it one short
+            # retry, still using the *new live facing* so we never issue a
+            # movement-direction input.
+            facing = after_facing
+            target = self._spin_next_direction(facing)
+            button, x, y = self._spin_input(target)
+            if mode == "spin_dpad":
+                self.bot.press(button)
+                self.bot.release(button)
+            else:
+                self.bot.set_stick("LEFT", x, y)
+                self.bot.set_stick("LEFT", 0, 0)
+            if not self._sleep(.035):
+                return False
+            after_facing, after_pos = self._read_spin_avatar()
+            if after_pos != before_pos:
+                raise RuntimeError(
+                    f"Spin safety hold: movement detected {before_pos} -> {after_pos} "
+                    f"while retrying {facing} -> {target}."
+                )
+            if after_facing != target:
+                return True
+
+        return True
 
     def _spin_to_battle(self, hold=.045, settle=.055):
-        """Rotate in place using the same proven left-stick transport as Wiggle.
-
-        The previous implementation used Koi clickSeq. On hardware that path
-        produced no movement at all, while the setStick path used by Wiggle
-        works reliably. Keep Spin on that known-good transport and use short
-        pulses so the avatar can turn without being driven across a tile.
-        """
+        """Spin clockwise on one tile using live FRLG facing state."""
         self.bot.set_stick("LEFT", 0, 0)
-        magnitude=0x7FFF
-        directions=(
-            (0, magnitude),       # Up
-            (magnitude, 0),       # Right
-            (0, -magnitude),      # Down
-            (-magnitude, 0),      # Left
-        )
-        pulse=max(.030,min(.070,float(hold)))
-        gap=max(.035,min(.090,float(settle)))
-
         while not self.stop_hunt_event.is_set() and not self._is_in_battle():
-            for x, y in directions:
-                if self.stop_hunt_event.is_set() or self._is_in_battle():
-                    break
-
-                # Use the exact same controller API as the working Wiggle
-                # routine. Do not use clickSeq here.
-                self.bot.set_stick("LEFT", x, y)
-                if not self._sleep(pulse):
-                    self.bot.set_stick("LEFT", 0, 0)
-                    return False
-                self.bot.set_stick("LEFT", 0, 0)
-                if not self._sleep(gap):
-                    return False
-
-                if self._is_in_battle():
-                    break
-
+            if not self._spin_turn_pulse("spin"):
+                return False
         self.bot.set_stick("LEFT", 0, 0)
         if self._is_in_battle():
             self._sleep(1.0)
@@ -1305,24 +1368,11 @@ class BackendWorker(QThread):
         return False
 
     def _spin_dpad_to_battle(self, hold=.045, settle=.055):
-        """Rotate in place using the physical D-pad buttons instead of the left stick."""
+        """Spin clockwise on one tile using live FRLG facing state and D-pad taps."""
         self.bot.set_stick("LEFT", 0, 0)
-        directions=("DUP", "DRIGHT", "DDOWN", "DLEFT")
-        pulse=max(.030,min(.070,float(hold)))
-        gap=max(.035,min(.090,float(settle)))
-
         while not self.stop_hunt_event.is_set() and not self._is_in_battle():
-            for button in directions:
-                if self.stop_hunt_event.is_set() or self._is_in_battle():
-                    break
-                self.bot.click(button)
-                if not self._sleep(pulse):
-                    return False
-                if not self._sleep(gap):
-                    return False
-                if self._is_in_battle():
-                    break
-
+            if not self._spin_turn_pulse("spin_dpad"):
+                return False
         if self._is_in_battle():
             self._sleep(1.0)
             return True
