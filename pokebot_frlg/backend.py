@@ -1398,41 +1398,56 @@ class BackendWorker(QThread):
 
         return True
 
-    # Spin restored to the pre-SysBot timing implementation; do not replace with fixed wiggle taps.\n    def _spin_to_battle(self, hold=.045, settle=.055):
-        """Spin clockwise on one tile using live FRLG facing state."""
+    # Spin uses the proven Koi left-stick transport. It deliberately does not
+    # depend on the unverified ObjectEvent/facing RAM probe.
+    def _spin_to_battle(self, hold=.045, settle=.055):
+        """Rotate in place using short left-stick pulses."""
         self.bot.set_stick("LEFT", 0, 0)
+        magnitude=0x7FFF
+        directions=((0,magnitude),(magnitude,0),(0,-magnitude),(-magnitude,0))
+        pulse=max(.030,min(.070,float(hold)))
+        gap=max(.035,min(.090,float(settle)))
         while not self.stop_hunt_event.is_set() and not self._is_in_battle():
-            if not self._spin_turn_pulse("spin"):
-                return False
-        self.bot.set_stick("LEFT", 0, 0)
+            for x,y in directions:
+                if self.stop_hunt_event.is_set() or self._is_in_battle():
+                    break
+                self.bot.set_stick("LEFT",x,y)
+                if not self._sleep(pulse):
+                    self.bot.set_stick("LEFT",0,0)
+                    return False
+                self.bot.set_stick("LEFT",0,0)
+                if not self._sleep(gap):
+                    return False
+                if self._is_in_battle():
+                    break
+        self.bot.set_stick("LEFT",0,0)
         if self._is_in_battle():
             self._sleep(1.0)
             return True
         return False
 
     def _spin_dpad_to_battle(self, hold=.045, settle=.055):
-        """Spin clockwise on one tile using live FRLG facing state and D-pad taps."""
-        self.bot.set_stick("LEFT", 0, 0)
+        """D-pad Spin using the same short directional pulse timing."""
+        self.bot.set_stick("LEFT",0,0)
+        pulse=max(.030,min(.070,float(hold)))
+        gap=max(.035,min(.090,float(settle)))
+        directions=("DUP","DRIGHT","DDOWN","DLEFT")
         while not self.stop_hunt_event.is_set() and not self._is_in_battle():
-            if not self._spin_turn_pulse("spin_dpad"):
-                return False
+            for button in directions:
+                if self.stop_hunt_event.is_set() or self._is_in_battle():
+                    break
+                self.bot.press(button)
+                if not self._sleep(pulse):
+                    self.bot.release(button)
+                    return False
+                self.bot.release(button)
+                if not self._sleep(gap):
+                    return False
+                if self._is_in_battle():
+                    break
         if self._is_in_battle():
             self._sleep(1.0)
             return True
-        return False
-    def _wiggle_to_battle(self):
-        # Match the public FRLG routine more closely: keep one axis for the
-        # whole search, then alternate axis only after a completed battle.
-        self.bot.set_stick("LEFT",0,0)
-        while not self.stop_hunt_event.is_set() and not self._is_in_battle():
-            if self._wild_horizontal:
-                if not self._stick_tap(0x7FFF,0): return False
-                if not self._stick_tap(-0x8000,0): return False
-            else:
-                if not self._stick_tap(0,0x7FFF): return False
-                if not self._stick_tap(0,-0x8000): return False
-        self.bot.set_stick("LEFT",0,0)
-        if self._is_in_battle(): self._sleep(1.0); return True
         return False
 
     def _escape_battle(self):
