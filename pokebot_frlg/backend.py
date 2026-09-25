@@ -1253,41 +1253,54 @@ class BackendWorker(QThread):
     def _run_static_hooh(self,h,options): self._run_static_common(h,"DUP",options)
 
     def _read_spin_avatar(self):
-        """Read the live FRLG player facing and current tile.
+        """Read FRLG player ObjectEvent data for Spin diagnostics.
 
-        FRLG's gObjectEvents array is at GBA 0x02036E38 and each ObjectEvent
-        is 0x24 bytes. gPlayerAvatar is immediately after that array at
-        0x02037078; byte +5 is the active object-event ID.
-
-        IMPORTANT: ObjectEvent.facingDirection is the LOW NIBBLE at +0x18
-        (the high nibble is movementDirection). It is NOT at +0x20.
+        Do not assume the active ObjectEvent ID is valid until we have seen
+        the actual Switch FRLG structure. When facing is unknown, dump the
+        avatar bytes and all 16 ObjectEvent headers so the correct player
+        entry/field can be identified from one run.
         """
         avatar = self.bot.read_heap(PLAYER_AVATAR, 6)
         object_id = avatar[5]
-        if object_id >= 16:
-            raise RuntimeError(f"Spin safety: invalid player object-event id 0x{object_id:02X}")
 
-        obj = self.bot.read_heap(OBJECT_EVENTS + object_id * 0x24, 0x24)
-
-        # ObjectEvent +0x18:
-        #   low nibble  = facingDirection
-        #   high nibble = movementDirection
-        facing = obj[0x18] & 0x0F
-        facing_name = {
-            1: "Up",
-            2: "Down",
-            3: "Left",
-            4: "Right",
-        }.get(facing)
-        if facing_name is None:
-            raise RuntimeError(
-                f"Spin safety: unknown player facing byte 0x{obj[0x18]:02X} "
-                f"(facing nibble 0x{facing:X})"
+        def decode_entry(index, obj):
+            facing18 = obj[0x18]
+            facing20 = obj[0x20]
+            x = int.from_bytes(obj[0x10:0x12], "little")
+            y = int.from_bytes(obj[0x12:0x14], "little")
+            return (
+                f"obj[{index:02d}] id?={obj[0]:02X} "
+                f"xy=({x},{y}) +18={facing18:02X} +20={facing20:02X} "
+                f"head={obj[:8].hex()}"
             )
 
-        x = int.from_bytes(obj[0x10:0x12], "little")
-        y = int.from_bytes(obj[0x12:0x14], "little")
-        return facing_name, (x, y)
+        if object_id < 16:
+            obj = self.bot.read_heap(OBJECT_EVENTS + object_id * 0x24, 0x24)
+            facing_byte = obj[0x18]
+            facing = facing_byte & 0x0F
+            facing_name = {1: "Up", 2: "Down", 3: "Left", 4: "Right"}.get(facing)
+
+            if facing_name is not None:
+                x = int.from_bytes(obj[0x10:0x12], "little")
+                y = int.from_bytes(obj[0x12:0x14], "little")
+                return facing_name, (x, y)
+
+        # One-shot diagnostic dump. This deliberately raises so Spin cannot
+        # send any movement input while the structure is unidentified.
+        lines = [
+            f"SPIN DIAG: PLAYER_AVATAR=0x{PLAYER_AVATAR:X}",
+            f"SPIN DIAG: OBJECT_EVENTS=0x{OBJECT_EVENTS:X}",
+            f"SPIN DIAG: avatar={avatar.hex()} active_id=0x{object_id:02X}",
+        ]
+
+        for index in range(16):
+            entry = self.bot.read_heap(OBJECT_EVENTS + index * 0x24, 0x24)
+            lines.append(decode_entry(index, entry))
+
+        raise RuntimeError(
+            "Spin safety: player ObjectEvent/facing not identified. "
+            + " | ".join(lines)
+        )
 
     @staticmethod
     def _spin_next_direction(facing):
