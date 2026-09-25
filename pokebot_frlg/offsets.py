@@ -24,6 +24,14 @@ BOX_START_SHIFT = 0x10
 BOX_FORMAT_SLOT_SIZE = 0x50
 PARTY_SLOT_STRIDE = 0x64
 
+# FRLG 1.0.0 GBA field structures, mapped into the Switch heap.
+# gObjectEvents = 0x02036E38 (16 x 0x24-byte ObjectEvent entries).
+# gPlayerAvatar = 0x02037078; byte +5 is the active ObjectEvent ID.
+# ObjectEvent +0x20 is the facing direction: 0x11 Down, 0x22 Up,
+# 0x33 Left, 0x44 Right.
+PLAYER_AVATAR = INITIAL_SEED + (0x02037078 - 0x02000000)
+OBJECT_EVENTS = INITIAL_SEED + (0x02036E38 - 0x02000000)
+
 _ENTRIES = [
     FRLGOffsets("Japanese", "FireRed",   "01006FA0233F8000", 0xBD68D230, 0x120BF88, 0x120C1E0, 0x1222B54),
     FRLGOffsets("Japanese", "LeafGreen", "0100F1E0233FA000", 0xBD68D230, 0x120BF88, 0x120C1E0, 0x1222B54),
