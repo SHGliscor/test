@@ -1257,23 +1257,34 @@ class BackendWorker(QThread):
 
         FRLG's gObjectEvents array is at GBA 0x02036E38 and each ObjectEvent
         is 0x24 bytes. gPlayerAvatar is immediately after that array at
-        0x02037078; byte +5 is the active object-event ID. The facing byte in
-        the selected ObjectEvent is +0x20.
+        0x02037078; byte +5 is the active object-event ID.
+
+        IMPORTANT: ObjectEvent.facingDirection is the LOW NIBBLE at +0x18
+        (the high nibble is movementDirection). It is NOT at +0x20.
         """
         avatar = self.bot.read_heap(PLAYER_AVATAR, 6)
         object_id = avatar[5]
         if object_id >= 16:
             raise RuntimeError(f"Spin safety: invalid player object-event id 0x{object_id:02X}")
+
         obj = self.bot.read_heap(OBJECT_EVENTS + object_id * 0x24, 0x24)
-        facing = obj[0x20]
+
+        # ObjectEvent +0x18:
+        #   low nibble  = facingDirection
+        #   high nibble = movementDirection
+        facing = obj[0x18] & 0x0F
         facing_name = {
-            0x11: "Down",
-            0x22: "Up",
-            0x33: "Left",
-            0x44: "Right",
+            1: "Up",
+            2: "Down",
+            3: "Left",
+            4: "Right",
         }.get(facing)
         if facing_name is None:
-            raise RuntimeError(f"Spin safety: unknown player facing byte 0x{facing:02X}")
+            raise RuntimeError(
+                f"Spin safety: unknown player facing byte 0x{obj[0x18]:02X} "
+                f"(facing nibble 0x{facing:X})"
+            )
+
         x = int.from_bytes(obj[0x10:0x12], "little")
         y = int.from_bytes(obj[0x12:0x14], "little")
         return facing_name, (x, y)
