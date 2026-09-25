@@ -33,7 +33,7 @@ class BackendWorker(QThread):
         self.bot=None; self.off=None; self.connected=False; self.hunting=False; self.interval=.75; self._next_idle=0.0
         self.data=None; self.current_game=None; self.display_is_off=False; self._display_lock=threading.Lock(); self._display_request=None; self._wild_horizontal=True
         self._last_rng_fields={}; self._rng_rate_estimate=120.0
-        self._wild_movement_mode="wiggle"
+        self._wild_movement_mode="wiggle"\n        self._wiggle_axis="horizontal"
         self._next_utilities=0.0
         self._oak_targets=set()
         self._oak_blocked=set()
@@ -1398,27 +1398,29 @@ class BackendWorker(QThread):
 
         return True
 
-    def _wiggle_to_battle(self):
-        """Search for wild encounters with short alternating stick taps.
+    def _wiggle_to_battle(self, axis="horizontal"):
+        """Search for wild encounters on one fixed axis.
 
-        FRLG's SysBot routine uses opposite-direction taps on one axis at a
-        time. Keep that behavior here and switch axes only after the battle
-        has completed.
+        Wiggle has two explicit modes: Left/Right only or Up/Down only.
+        Each search cycle makes at least four movement taps before checking
+        for battle, giving the player time to take real steps rather than
+        repeatedly twitching in place.
         """
         self.bot.set_stick("LEFT", 0, 0)
         hold = 0.05
         settle = 0.12
+        if str(axis).lower() in ("vertical", "updown", "up/down"):
+            directions = ((0, 0x7FFF), (0, -0x8000), (0, 0x7FFF), (0, -0x8000))
+        else:
+            directions = ((0x7FFF, 0), (-0x8000, 0), (0x7FFF, 0), (-0x8000, 0))
+
         while not self.stop_hunt_event.is_set() and not self._is_in_battle():
-            if self._wild_horizontal:
-                if not self._stick_tap(0x7FFF, 0, hold=hold, settle=settle):
+            for x, y in directions:
+                if self.stop_hunt_event.is_set() or self._is_in_battle():
+                    break
+                if not self._stick_tap(x, y, hold=hold, settle=settle):
                     return False
-                if not self._stick_tap(-0x8000, 0, hold=hold, settle=settle):
-                    return False
-            else:
-                if not self._stick_tap(0, 0x7FFF, hold=hold, settle=settle):
-                    return False
-                if not self._stick_tap(0, -0x8000, hold=hold, settle=settle):
-                    return False
+
         self.bot.set_stick("LEFT", 0, 0)
         if self._is_in_battle():
             self._sleep(1.0)
