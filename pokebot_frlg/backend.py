@@ -1398,6 +1398,33 @@ class BackendWorker(QThread):
 
         return True
 
+    def _wiggle_to_battle(self):
+        """Search for wild encounters with short alternating stick taps.
+
+        FRLG's SysBot routine uses opposite-direction taps on one axis at a
+        time. Keep that behavior here and switch axes only after the battle
+        has completed.
+        """
+        self.bot.set_stick("LEFT", 0, 0)
+        hold = 0.05
+        settle = 0.12
+        while not self.stop_hunt_event.is_set() and not self._is_in_battle():
+            if self._wild_horizontal:
+                if not self._stick_tap(0x7FFF, 0, hold=hold, settle=settle):
+                    return False
+                if not self._stick_tap(-0x8000, 0, hold=hold, settle=settle):
+                    return False
+            else:
+                if not self._stick_tap(0, 0x7FFF, hold=hold, settle=settle):
+                    return False
+                if not self._stick_tap(0, -0x8000, hold=hold, settle=settle):
+                    return False
+        self.bot.set_stick("LEFT", 0, 0)
+        if self._is_in_battle():
+            self._sleep(1.0)
+            return True
+        return False
+
     # Spin uses the proven Koi left-stick transport. It deliberately does not
     # depend on the unverified ObjectEvent/facing RAM probe.
     def _spin_to_battle(self, hold=.045, settle=.055):
