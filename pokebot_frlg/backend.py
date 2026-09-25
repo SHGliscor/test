@@ -33,7 +33,8 @@ class BackendWorker(QThread):
         self.bot=None; self.off=None; self.connected=False; self.hunting=False; self.interval=.75; self._next_idle=0.0
         self.data=None; self.current_game=None; self.display_is_off=False; self._display_lock=threading.Lock(); self._display_request=None; self._wild_horizontal=True
         self._last_rng_fields={}; self._rng_rate_estimate=120.0
-        self._wild_movement_mode="wiggle"\n        self._wiggle_axis="horizontal"
+        self._wild_movement_mode="wiggle"
+        self._wiggle_axis="horizontal"
         self._next_utilities=0.0
         self._oak_targets=set()
         self._oak_blocked=set()
