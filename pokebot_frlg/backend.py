@@ -1274,8 +1274,8 @@ class BackendWorker(QThread):
         }.get(facing)
         if facing_name is None:
             raise RuntimeError(f"Spin safety: unknown player facing byte 0x{facing:02X}")
-        x = int.from_bytes(obj[0x14:0x16], "little")
-        y = int.from_bytes(obj[0x16:0x18], "little")
+        x = int.from_bytes(obj[0x10:0x12], "little")
+        y = int.from_bytes(obj[0x12:0x14], "little")
         return facing_name, (x, y)
 
     @staticmethod
