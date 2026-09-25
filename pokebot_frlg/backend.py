@@ -304,6 +304,15 @@ class BackendWorker(QThread):
             ) or changed
         return self._capture_probe_wait(predicate, timeout=timeout, label=f"{label} target", interval=.05, stable=2)
 
+    def _stick_tap(self, x, y, hold=.12, settle=.08):
+        """Send one analogue-stick tap, then return to neutral."""
+        self.bot.set_stick("LEFT", int(x), int(y))
+        if not self._sleep(float(hold)):
+            self.bot.set_stick("LEFT", 0, 0)
+            return False
+        self.bot.set_stick("LEFT", 0, 0)
+        return self._sleep(float(settle))
+
     def _menu_move(self, x, y, label, hold=.12):
         """Move the in-battle menu with the same left-stick path used by FRLG movement."""
         self.status.emit({"state":"CAPTURE_MENU","message":label})
