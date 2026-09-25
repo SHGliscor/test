@@ -55,6 +55,10 @@ class BackendWorker(QThread):
         """Queue a manual diagnostic ZIP (Testing / Support page)."""
         self.actions.put(("export_support", str(note or "manual_export")))
 
+    def request_export_spin_diagnostic(self):
+        """Queue a plain JSON Spin RAM snapshot; no controller input is sent."""
+        self.actions.put(("export_spin_diagnostic",))
+
 
     def run(self):
         while not self.shutdown_event.is_set():
@@ -78,6 +82,7 @@ class BackendWorker(QThread):
         elif kind=="detach_controller": self._release_controller()
         elif kind=="display": self._service_display_request()
         elif kind=="export_support": self._export_support_zip(a[1] if len(a)>1 else "manual_export")
+        elif kind=="export_spin_diagnostic": self._export_spin_diagnostic()
         elif kind=="shutdown": self._close()
 
     def _service_display_request(self):
@@ -1710,6 +1715,34 @@ class BackendWorker(QThread):
             else: self.party.emit(now)
             if pp<=0:
                 raise RuntimeError("Pickup lead Move 1 reached the starting PP limit. Heal/reposition, then restart Pickup mode.")
+
+    def _export_spin_diagnostic(self):
+        """Write a plain JSON Spin RAM snapshot for troubleshooting.
+
+        This is deliberately read-only: it never presses a button or changes
+        the stick. The file contains the raw player/ObjectEvent bytes needed
+        to identify the real player object and facing field.
+        """
+        try:
+            if not self.connected or not self.bot or not self.off:
+                raise RuntimeError("Not connected to FRLG")
+            stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            root = appdata_root() / "support"
+            root.mkdir(parents=True, exist_ok=True)
+            path = root / f"spin_diagnostic_{stamp}.json"
+            rec = {
+                "app": "PokebotSwitch-FRLG UI",
+                "timestamp": datetime.now().isoformat(timespec="seconds"),
+                "game": self.current_game,
+                "connected": bool(self.connected),
+                "controller_input_sent": False,
+                "spin_diagnostic": self._spin_diagnostic_snapshot(),
+            }
+            path.write_text(json.dumps(rec, indent=2), encoding="utf-8")
+            self.support.emit(str(path))
+            self.log.emit(f"Spin diagnostic JSON written: {path}")
+        except Exception as exc:
+            self.log.emit(f"Spin diagnostic failed: {exc}")
 
     def _export_support_zip(self, note="manual_export"):
         """Build a small manual support ZIP for the Testing / Support page.
