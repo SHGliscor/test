@@ -1,21 +1,17 @@
 name: v13 encounter snapshot
 
 on:
-  push:
+  pull_request:
     branches: [chatgpt-v13-encounter-data-temp]
-    paths-ignore:
-      - 'generated/**'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   generate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: chatgpt-v13-encounter-data-temp
       - name: Build compact FRLG encounter snapshot
         shell: bash
         run: |
@@ -106,14 +102,9 @@ jobs:
                   if existing is None:
                       games[game][key]=json.loads(json.dumps(record,separators=(',',':')))
                   else:
-                      # Merge methods if source contains split records for same map/version.
                       existing['m'].update(record['m'])
 
-          snapshot={
-              'schema':1,
-              'source':'pret/pokefirered src/data/wild_encounters.json',
-              'games':games,
-          }
+          snapshot={'schema':1,'source':'pret/pokefirered src/data/wild_encounters.json','games':games}
           raw=json.dumps(snapshot,separators=(',',':'),sort_keys=True).encode()
           compressed=zlib.compress(raw,9)
           encoded=base64.b85encode(compressed).decode('ascii')
@@ -123,13 +114,7 @@ jobs:
           print(json.dumps(stats,indent=2))
           print('raw',len(raw),'compressed',len(compressed),'encoded',len(encoded))
           PY
-      - name: Commit generated snapshot
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add generated/frlg_encounters.b85 generated/frlg_encounters_stats.json
-          git diff --cached --quiet && exit 0
-          git commit -m 'chore: generated FRLG encounter snapshot'
-          git push origin HEAD:chatgpt-v13-encounter-data-temp
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frlg-v13-encounter-snapshot
+          path: generated/
