@@ -1,0 +1,135 @@
+name: v13 encounter snapshot
+
+on:
+  push:
+    branches: [chatgpt-v13-encounter-data-temp]
+    paths-ignore:
+      - 'generated/**'
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt-v13-encounter-data-temp
+      - name: Build compact FRLG encounter snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p generated /tmp/frlg-src
+          curl -fsSL https://raw.githubusercontent.com/pret/pokefirered/master/src/data/wild_encounters.json -o /tmp/frlg-src/wild_encounters.json
+          curl -fsSL https://raw.githubusercontent.com/pret/pokefirered/master/data/maps/map_groups.json -o /tmp/frlg-src/map_groups.json
+          curl -fsSL https://raw.githubusercontent.com/pret/pokefirered/master/include/constants/species.h -o /tmp/frlg-src/species.h
+          python - <<'PY'
+          import base64, json, re, zlib
+          from pathlib import Path
+
+          src = Path('/tmp/frlg-src')
+          wild = json.loads((src/'wild_encounters.json').read_text())
+          groups = json.loads((src/'map_groups.json').read_text())
+          species_text = (src/'species.h').read_text()
+
+          species = {}
+          for name, value in re.findall(r'^#define\s+(SPECIES_[A-Z0-9_]+)\s+([0-9]+|0x[0-9A-Fa-f]+)\s*$', species_text, re.M):
+              species[name] = int(value, 0)
+
+          def snake_piece(s):
+              s = re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', s)
+              s = re.sub(r'([A-Z]+)([A-Z][a-z])', r'\1_\2', s)
+              return s.upper()
+
+          def map_constant(name):
+              return 'MAP_' + '_'.join(snake_piece(p) for p in name.split('_'))
+
+          map_lookup = {}
+          for gi, group_name in enumerate(groups['group_order']):
+              for mi, map_name in enumerate(groups[group_name]):
+                  map_lookup[map_constant(map_name)] = (gi, mi, map_name)
+
+          def display_name(name):
+              parts=[]
+              for p in name.split('_'):
+                  p=re.sub(r'([a-z0-9])([A-Z])', r'\1 \2', p)
+                  p=re.sub(r'([A-Z]+)([A-Z][a-z])', r'\1 \2', p)
+                  parts.append(p)
+              return ' '.join(parts).replace('Mt Moon','Mt. Moon').replace('SS Anne','S.S. Anne')
+
+          weights = {
+              'land_mons':[20,20,10,10,10,10,5,5,4,4,1,1],
+              'water_mons':[60,30,5,4,1],
+              'rock_smash_mons':[60,30,5,4,1],
+          }
+          fish_weights=[70,30,60,20,20,40,40,15,4,1]
+          fish_groups={'old_rod':[0,1],'good_rod':[2,3,4],'super_rod':[5,6,7,8,9]}
+          method_names={'land_mons':'land','water_mons':'water','rock_smash_mons':'rock_smash'}
+
+          games={'FireRed':{}, 'LeafGreen':{}}
+          encounters=wild['wild_encounter_groups'][0]['encounters']
+          for enc in encounters:
+              mc=enc['map']
+              if mc not in map_lookup:
+                  raise RuntimeError(f'Unmapped encounter map: {mc}')
+              gi,mi,map_name=map_lookup[mc]
+              label=enc.get('base_label','')
+              targets=['FireRed','LeafGreen']
+              if 'FireRed' in label: targets=['FireRed']
+              elif 'LeafGreen' in label: targets=['LeafGreen']
+              record={'n':display_name(map_name),'m':{}}
+              for src_key, method in method_names.items():
+                  if src_key not in enc: continue
+                  info=enc[src_key]
+                  ws=weights[src_key]
+                  slots=[]
+                  for w, mon in zip(ws, info['mons']):
+                      sp=species.get(mon['species'])
+                      if sp is None: raise RuntimeError(f'Unknown species {mon["species"]}')
+                      slots.append([sp,int(mon['min_level']),int(mon['max_level']),int(w)])
+                  record['m'][method]={'r':int(info['encounter_rate']),'s':slots}
+              if 'fishing_mons' in enc:
+                  info=enc['fishing_mons']
+                  allmons=info['mons']
+                  for rod, indices in fish_groups.items():
+                      slots=[]
+                      for i in indices:
+                          mon=allmons[i]
+                          sp=species.get(mon['species'])
+                          if sp is None: raise RuntimeError(f'Unknown species {mon["species"]}')
+                          slots.append([sp,int(mon['min_level']),int(mon['max_level']),int(fish_weights[i])])
+                      record['m'][rod]={'r':int(info['encounter_rate']),'s':slots}
+              key=f'{gi},{mi}'
+              for game in targets:
+                  existing=games[game].get(key)
+                  if existing is None:
+                      games[game][key]=json.loads(json.dumps(record,separators=(',',':')))
+                  else:
+                      # Merge methods if source contains split records for same map/version.
+                      existing['m'].update(record['m'])
+
+          snapshot={
+              'schema':1,
+              'source':'pret/pokefirered src/data/wild_encounters.json',
+              'games':games,
+          }
+          raw=json.dumps(snapshot,separators=(',',':'),sort_keys=True).encode()
+          compressed=zlib.compress(raw,9)
+          encoded=base64.b85encode(compressed).decode('ascii')
+          Path('generated/frlg_encounters.b85').write_text(encoded)
+          stats={g:{'maps':len(v),'methods':sum(len(x['m']) for x in v.values())} for g,v in games.items()}
+          Path('generated/frlg_encounters_stats.json').write_text(json.dumps({'raw_bytes':len(raw),'compressed_bytes':len(compressed),'encoded_bytes':len(encoded),'stats':stats},indent=2))
+          print(json.dumps(stats,indent=2))
+          print('raw',len(raw),'compressed',len(compressed),'encoded',len(encoded))
+          PY
+      - name: Commit generated snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add generated/frlg_encounters.b85 generated/frlg_encounters_stats.json
+          git diff --cached --quiet && exit 0
+          git commit -m 'chore: generated FRLG encounter snapshot'
+          git push origin HEAD:chatgpt-v13-encounter-data-temp
