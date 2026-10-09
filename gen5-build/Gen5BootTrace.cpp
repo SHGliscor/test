@@ -1,4 +1,4 @@
-// Gen 5 SHA1 Boot Preimage Evidence v1.3. No writes to guest DS RAM; no buttons, cheats, save states.
+// Gen 5 Read-Only Hardware Access Trace v1.4. No writes to guest DS RAM; no buttons, cheats, save states.
 #include "Gen5BootTrace.h"
 #include "NDS.h"
 #include "Wifi.h"
@@ -11,15 +11,15 @@
 
 namespace Gen5BootTrace {
 namespace {
-constexpr std::uint32_t Capacity = 120;
+constexpr std::uint32_t Capacity = 96;
 constexpr std::size_t AllocationSize = 0x5000;
 
 struct alignas(8) Header {
-    char magic[8];                 // "PB5EVT13"
-    std::uint32_t version;         // 4
+    char magic[8];                 // "PB5EVT14"
+    std::uint32_t version;         // 5
     std::uint32_t header_size;     // 64
-    std::uint32_t entry_size;      // 160
-    std::uint32_t capacity;        // 120
+    std::uint32_t entry_size;      // 208
+    std::uint32_t capacity;        // 96
     std::uint64_t total_events;    // committed events
     std::uint64_t frame_counter;   // NDS::RunFrame() calls observed
     std::uint64_t mainram_ptr;     // host pointer to DS RAM (may change)
@@ -65,9 +65,21 @@ struct alignas(8) Event {
     std::uint32_t console_type;
     std::uint32_t gxstat_at_frame;
     std::uint32_t context_reserved;
+    // Context from ACTUAL emulated hardware read operations, not just
+    // the frame boundary. These are the most recent I/O reads, not yet
+    // proven to be the game's SHA1 preimage fetches.
+    std::uint64_t last_timer0_read_frame;
+    std::uint32_t last_timer0_value;
+    std::uint32_t last_timer0_vcount;
+    std::uint32_t last_timer0_gxstat;
+    std::uint32_t timer0_read_count;
+    std::uint64_t last_rtc_read_frame;
+    std::uint8_t last_rtc_read_bcd[7];
+    std::uint8_t last_rtc_read_valid;
+    std::uint64_t rtc_read_count;
 };
 static_assert(sizeof(Header) == 64, "BootTrace header layout mismatch");
-static_assert(sizeof(Event) == 160, "BootTrace event layout mismatch");
+static_assert(sizeof(Event) == 208, "BootTrace event layout mismatch");
 struct Trace {
     Header header;
     Event events[Capacity];
@@ -81,6 +93,12 @@ std::uint32_t g_mt = 0, g_index = 0, g_delay = 0;
 bool g_have_previous = false;
 bool g_prev_reset_combo = false;
 std::uint64_t g_latest_reset_combo_frame = 0;
+std::uint64_t g_last_timer_read_frame = 0, g_last_rtc_read_frame = 0;
+std::uint32_t g_last_timer_value = 0, g_last_timer_vcount = 0;
+std::uint32_t g_last_timer_gxstat = 0, g_timer_read_count = 0;
+std::uint8_t g_last_rtc_bcd[7] = {};
+std::uint8_t g_rtc_valid = 0;
+std::uint64_t g_rtc_read_count = 0;
 
 inline std::uint32_t Read32(const std::uint8_t* ram, std::uint32_t addr) {
     std::uint32_t value;
@@ -207,6 +225,15 @@ void Record(std::uint64_t rng, std::uint32_t mt, std::uint32_t index,
     e.console_type = static_cast<std::uint32_t>(NDS::ConsoleType);
     e.gxstat_at_frame = GPU3D::Read32(0x04000600);
     e.context_reserved = 0;
+    e.last_timer0_read_frame = g_last_timer_read_frame;
+    e.last_timer0_value = g_last_timer_value;
+    e.last_timer0_vcount = g_last_timer_vcount;
+    e.last_timer0_gxstat = g_last_timer_gxstat;
+    e.timer0_read_count = g_timer_read_count;
+    e.last_rtc_read_frame = g_last_rtc_read_frame;
+    std::memcpy(e.last_rtc_read_bcd, g_last_rtc_bcd, 7);
+    e.last_rtc_read_valid = g_rtc_valid;
+    e.rtc_read_count = g_rtc_read_count;
     __atomic_store_n(&e.sequence, seq, __ATOMIC_RELEASE);
     __atomic_store_n(&h.total_events, seq, __ATOMIC_RELEASE);
 }
@@ -218,8 +245,8 @@ void Init() {
     if (data == nullptr) return;
     std::memset(data, 0, AllocationSize);
     g_trace = static_cast<Trace*>(data);
-    std::memcpy(g_trace->header.magic, "PB5EVT13", 8);
-    g_trace->header.version = 4;
+    std::memcpy(g_trace->header.magic, "PB5EVT14", 8);
+    g_trace->header.version = 5;
     g_trace->header.header_size = sizeof(Header);
     g_trace->header.entry_size = sizeof(Event);
     g_trace->header.capacity = Capacity;
@@ -228,6 +255,35 @@ void Init() {
     g_game = 0;
     g_prev_reset_combo = false;
     g_latest_reset_combo_frame = 0;
+    g_last_timer_read_frame = 0;
+    g_last_rtc_read_frame = 0;
+    g_last_timer_value = g_last_timer_vcount = g_last_timer_gxstat = 0;
+    g_timer_read_count = 0;
+    std::memset(g_last_rtc_bcd, 0, 7);
+    g_rtc_valid = 0;
+    g_rtc_read_count = 0;
+}
+
+void OnTimer0Read(std::uint16_t timer0, std::uint16_t vcount, std::uint32_t gxstat) {
+    if (g_trace == nullptr) return;
+    g_last_timer_read_frame = g_trace->header.frame_counter;
+    g_last_timer_value = timer0;
+    g_last_timer_vcount = vcount;
+    g_last_timer_gxstat = gxstat;
+    ++g_timer_read_count;
+}
+
+void OnRTCRead(const std::uint8_t* bcd, std::uint32_t length) {
+    if (g_trace == nullptr || bcd == nullptr) return;
+    g_last_rtc_read_frame = g_trace->header.frame_counter;
+    if (length == 7) {
+        std::memcpy(g_last_rtc_bcd, bcd, 7);
+        g_rtc_valid = 1;
+    } else if (length == 3) {
+        std::memcpy(g_last_rtc_bcd + 4, bcd, 3);
+        // Don't claim full date unless already observed by a full RTC read.
+    } else return;
+    ++g_rtc_read_count;
 }
 
 std::uintptr_t BufferAddress() {
@@ -314,5 +370,12 @@ void DeInit() {
     g_game = 0;
     g_prev_reset_combo = false;
     g_latest_reset_combo_frame = 0;
+    g_last_timer_read_frame = 0;
+    g_last_rtc_read_frame = 0;
+    g_last_timer_value = g_last_timer_vcount = g_last_timer_gxstat = 0;
+    g_timer_read_count = 0;
+    std::memset(g_last_rtc_bcd, 0, 7);
+    g_rtc_valid = 0;
+    g_rtc_read_count = 0;
 }
 }
