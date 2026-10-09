@@ -1,0 +1,182 @@
+// Gen 5 BootTrace v1.0. No writes to guest DS RAM; no buttons, cheats, save states.
+#include "Gen5BootTrace.h"
+#include "NDS.h"
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+
+namespace Gen5BootTrace {
+namespace {
+constexpr std::uint32_t Capacity = 256;
+constexpr std::size_t AllocationSize = 0x5000;
+
+struct alignas(8) Header {
+    char magic[8];                 // "PB5EVT10"
+    std::uint32_t version;         // 1
+    std::uint32_t header_size;     // 64
+    std::uint32_t entry_size;      // 64
+    std::uint32_t capacity;        // 256
+    std::uint64_t total_events;    // committed events
+    std::uint64_t frame_counter;   // NDS::RunFrame() calls observed
+    std::uint64_t mainram_ptr;     // host pointer to DS RAM (may change)
+    std::uint32_t ds_mask;         // 0x003FFFFF for DS
+    std::uint32_t game;            // 1=Black,2=White,3=Black2,4=White2
+    std::uint32_t status;          // 1 = active, 2 = DS header not ready
+    std::uint32_t dropped;         // reserved
+};
+struct alignas(8) Event {
+    std::uint64_t sequence;        // committed last; 0 means slot is being written
+    std::uint64_t frame;           // frame number
+    std::uint64_t rng;             // first value seen at this frame boundary
+    std::uint32_t mt_seed;
+    std::uint32_t mt_index;
+    std::uint32_t delay;
+    std::uint32_t prev_delay;
+    std::uint32_t prev_mt_seed;
+    std::uint32_t flags;           // 1=baseline 2=delay-drop 4=MT-change 8=0-to-seed 16=high32=MT 32=game-change
+    std::uint64_t prev_rng;
+    std::uint64_t reserved;
+};
+static_assert(sizeof(Header) == 64, "BootTrace header layout mismatch");
+static_assert(sizeof(Event) == 64, "BootTrace event layout mismatch");
+struct Trace {
+    Header header;
+    Event events[Capacity];
+};
+static_assert(sizeof(Trace) <= AllocationSize, "BootTrace allocation too small");
+
+Trace* g_trace = nullptr;
+std::uint32_t g_game = 0;
+std::uint64_t g_rng = 0;
+std::uint32_t g_mt = 0, g_index = 0, g_delay = 0;
+bool g_have_previous = false;
+
+inline std::uint32_t Read32(const std::uint8_t* ram, std::uint32_t addr) {
+    std::uint32_t value;
+    std::memcpy(&value, ram + (addr & 0x003FFFFF), sizeof(value));
+    return value;
+}
+inline std::uint64_t Read64(const std::uint8_t* ram, std::uint32_t addr) {
+    std::uint64_t value;
+    std::memcpy(&value, ram + (addr & 0x003FFFFF), sizeof(value));
+    return value;
+}
+
+std::uint32_t Game(const std::uint8_t* ram) {
+    const auto* hdr = ram + 0x003FFE00;
+    if (std::memcmp(hdr, "POKEMON", 7) != 0 || hdr[15] != 'O')
+        return 0;
+    if (std::memcmp(hdr + 12, "IRBO", 4) == 0) return 1;
+    if (std::memcmp(hdr + 12, "IRAO", 4) == 0) return 2;
+    if (std::memcmp(hdr + 12, "IREO", 4) == 0) return 3;
+    if (std::memcmp(hdr + 12, "IRDO", 4) == 0) return 4;
+    return 0;
+}
+
+void Record(std::uint64_t rng, std::uint32_t mt, std::uint32_t index,
+            std::uint32_t delay, std::uint32_t flags) {
+    if (g_trace == nullptr) return;
+    auto& h = g_trace->header;
+    const std::uint64_t seq = h.total_events + 1;
+    auto& e = g_trace->events[(seq - 1) % Capacity];
+    __atomic_store_n(&e.sequence, 0ULL, __ATOMIC_RELEASE);
+    e.frame = h.frame_counter;
+    e.rng = rng;
+    e.mt_seed = mt;
+    e.mt_index = index;
+    e.delay = delay;
+    e.prev_delay = g_delay;
+    e.prev_mt_seed = g_mt;
+    e.flags = flags;
+    e.prev_rng = g_rng;
+    e.reserved = 0;
+    __atomic_store_n(&e.sequence, seq, __ATOMIC_RELEASE);
+    __atomic_store_n(&h.total_events, seq, __ATOMIC_RELEASE);
+}
+}
+
+void Init() {
+    if (g_trace != nullptr) return;
+    void* data = aligned_alloc(0x1000, AllocationSize);
+    if (data == nullptr) return;
+    std::memset(data, 0, AllocationSize);
+    g_trace = static_cast<Trace*>(data);
+    std::memcpy(g_trace->header.magic, "PB5EVT10", 8);
+    g_trace->header.version = 1;
+    g_trace->header.header_size = sizeof(Header);
+    g_trace->header.entry_size = sizeof(Event);
+    g_trace->header.capacity = Capacity;
+    g_trace->header.status = 2;
+    g_have_previous = false;
+    g_game = 0;
+}
+
+std::uintptr_t BufferAddress() {
+    return reinterpret_cast<std::uintptr_t>(g_trace);
+}
+
+void OnFrame() {
+    if (g_trace == nullptr || NDS::MainRAM == nullptr) return;
+    auto& h = g_trace->header;
+    ++h.frame_counter;
+    h.mainram_ptr = reinterpret_cast<std::uintptr_t>(NDS::MainRAM);
+    h.ds_mask = NDS::MainRAMMask;
+    if (NDS::MainRAMMask != 0x003FFFFF) {
+        h.status = 2;
+        g_have_previous = false;
+        return;
+    }
+    const auto* ram = NDS::MainRAM;
+    const auto game = Game(ram);
+    h.game = game;
+    h.status = game ? 1 : 2;
+    if (game == 0) {
+        g_have_previous = false;
+        g_game = 0;
+        return;
+    }
+
+    const std::uint32_t rng_addr = game == 1 ? 0x02216224 :
+                                   game == 2 ? 0x02216244 :
+                                   game == 3 ? 0x021FFC18 : 0x021FFC58;
+    const std::uint32_t mt_addr = game == 1 ? 0x02215354 :
+                                  game == 2 ? 0x02215374 :
+                                  game == 3 ? 0x021FED28 : 0x021FED68;
+    const std::uint32_t index_addr = game == 1 ? 0x02215D14 :
+                                     game == 2 ? 0x02215D34 :
+                                     game == 3 ? 0x021FF6E8 : 0x021FF728;
+    const std::uint64_t rng = Read64(ram, rng_addr);
+    const std::uint32_t mt = Read32(ram, mt_addr);
+    const std::uint32_t index = Read32(ram, index_addr);
+    const std::uint32_t delay = Read32(ram, 0x02FFFC3C);
+
+    std::uint32_t flags = 0;
+    if (!g_have_previous) flags |= 1;
+    if (g_have_previous && delay < g_delay && g_delay - delay >= 16) flags |= 2;
+    if (g_have_previous && mt != g_mt) flags |= 4;
+    if (g_have_previous && g_rng == 0 && rng != 0) flags |= 8;
+    if (rng != 0 && mt != 0 && (rng >> 32) == mt) flags |= 16;
+    if (g_game != game) flags |= 32;
+
+    // Only record interesting edges. Current-seed matching alone is common
+    // during idle: it is evidence, not a reset trigger.
+    if (flags & (1 | 2 | 4 | 8 | 32))
+        Record(rng, mt, index, delay, flags);
+
+    g_game = game;
+    g_have_previous = true;
+    g_rng = rng;
+    g_mt = mt;
+    g_index = index;
+    g_delay = delay;
+}
+
+void DeInit() {
+    if (g_trace == nullptr) return;
+    std::memset(g_trace, 0, sizeof(Trace));
+    free(g_trace);
+    g_trace = nullptr;
+    g_have_previous = false;
+    g_game = 0;
+}
+}
