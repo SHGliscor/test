@@ -1,0 +1,61 @@
+name: Build Gen5 melonDS v0.6 Direct Pointer NRO
+
+on:
+  push:
+    branches:
+      - gen5-melonds-upscale-build-v0p6
+    paths:
+      - '.github/workflows/build-gen5-v0p6-nro.yml'
+      - 'gen5-build/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout experimental branch
+        uses: actions/checkout@v4
+
+      - name: Clone exact melonDS Switch Upscale revision
+        run: |
+          git clone https://github.com/trulymust/melonDS-switch-upscale.git source
+          cd source
+          git checkout 2f2a7fbf8d439fc40f15edb2c50ac00600d6dace
+          git submodule update --init --recursive
+
+      - name: Add pointer descriptor from v0.5
+        run: python3 gen5-build/apply_to_melonds_source.py source
+
+      - name: Add on-screen MainRAM readout for exact-address USB validation
+        run: |
+          python3 gen5-build/add_gen5_pointer_overlay.py source
+          grep -n GEN5_V0P6_POINTER_READOUT source/src/frontend/switch/main.cpp
+
+      - name: Compile full Nintendo Switch NRO
+        run: |
+          mkdir -p source/build-gen5-v0p6
+          docker run --rm \
+            -v "$PWD/source:/work" \
+            -w /work/build-gen5-v0p6 \
+            devkitpro/devkita64 sh -lc \
+            '. /opt/devkitpro/switchvars.sh; cmake .. -G Ninja -DENABLE_OGLRENDERER=OFF -DBUILD_QT_SDL=OFF -DCMAKE_TOOLCHAIN_FILE=../cmake/Toolchain-cross-Switch.cmake -DCMAKE_BUILD_TYPE=Release && ninja -j2'
+
+      - name: Package NRO + digest
+        run: |
+          test -s source/build-gen5-v0p6/melonDS.nro
+          cp source/build-gen5-v0p6/melonDS.nro melonDS-Gen5-DirectPointer-v0p6.nro
+          sha256sum melonDS-Gen5-DirectPointer-v0p6.nro > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Upload NRO
+        uses: actions/upload-artifact@v4
+        with:
+          name: melonDS-Gen5-DirectPointer-v0p6
+          path: |
+            melonDS-Gen5-DirectPointer-v0p6.nro
+            SHA256SUMS.txt
+          if-no-files-found: error
