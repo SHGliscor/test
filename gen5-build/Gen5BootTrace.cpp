@@ -1,4 +1,4 @@
-// Gen 5 Seed Audit v1.1. No writes to guest DS RAM; no buttons, cheats, save states.
+// Gen 5 Reset Evidence v1.2. No writes to guest DS RAM; no buttons, cheats, save states.
 #include "Gen5BootTrace.h"
 #include "NDS.h"
 #include <cstdint>
@@ -11,10 +11,10 @@ constexpr std::uint32_t Capacity = 128;
 constexpr std::size_t AllocationSize = 0x5000;
 
 struct alignas(8) Header {
-    char magic[8];                 // "PB5EVT11"
-    std::uint32_t version;         // 2
+    char magic[8];                 // "PB5EVT12"
+    std::uint32_t version;         // 3
     std::uint32_t header_size;     // 64
-    std::uint32_t entry_size;      // 104
+    std::uint32_t entry_size;      // 120
     std::uint32_t capacity;        // 128
     std::uint64_t total_events;    // committed events
     std::uint64_t frame_counter;   // NDS::RunFrame() calls observed
@@ -46,9 +46,12 @@ struct alignas(8) Event {
     std::uint64_t mt_expected_hash;
     std::uint32_t mt_audit_status;    // 0=not_checked,1=match,2=mismatch,3=not_seeded
     std::uint32_t reserved2;
+    std::uint32_t key_input;        // KEYINPUT low16, active-low
+    std::uint32_t input_reserved;
+    std::uint64_t latest_reset_combo_frame; // 0 if never observed
 };
 static_assert(sizeof(Header) == 64, "BootTrace header layout mismatch");
-static_assert(sizeof(Event) == 104, "BootTrace event layout mismatch");
+static_assert(sizeof(Event) == 120, "BootTrace event layout mismatch");
 struct Trace {
     Header header;
     Event events[Capacity];
@@ -60,6 +63,8 @@ std::uint32_t g_game = 0;
 std::uint64_t g_rng = 0;
 std::uint32_t g_mt = 0, g_index = 0, g_delay = 0;
 bool g_have_previous = false;
+bool g_prev_reset_combo = false;
+std::uint64_t g_latest_reset_combo_frame = 0;
 
 inline std::uint32_t Read32(const std::uint8_t* ram, std::uint32_t addr) {
     std::uint32_t value;
@@ -147,6 +152,9 @@ void Record(std::uint64_t rng, std::uint32_t mt, std::uint32_t index,
     e.mt_expected_hash = audit.expected_hash;
     e.mt_audit_status = audit.status;
     e.reserved2 = 0;
+    e.key_input = static_cast<std::uint32_t>(NDS::KeyInput & 0xFFFF);
+    e.input_reserved = 0;
+    e.latest_reset_combo_frame = g_latest_reset_combo_frame;
     __atomic_store_n(&e.sequence, seq, __ATOMIC_RELEASE);
     __atomic_store_n(&h.total_events, seq, __ATOMIC_RELEASE);
 }
@@ -158,14 +166,16 @@ void Init() {
     if (data == nullptr) return;
     std::memset(data, 0, AllocationSize);
     g_trace = static_cast<Trace*>(data);
-    std::memcpy(g_trace->header.magic, "PB5EVT11", 8);
-    g_trace->header.version = 2;
+    std::memcpy(g_trace->header.magic, "PB5EVT12", 8);
+    g_trace->header.version = 3;
     g_trace->header.header_size = sizeof(Header);
     g_trace->header.entry_size = sizeof(Event);
     g_trace->header.capacity = Capacity;
     g_trace->header.status = 2;
     g_have_previous = false;
     g_game = 0;
+    g_prev_reset_combo = false;
+    g_latest_reset_combo_frame = 0;
 }
 
 std::uintptr_t BufferAddress() {
@@ -202,6 +212,14 @@ void OnFrame() {
     const std::uint32_t index_addr = game == 1 ? 0x02215D14 :
                                      game == 2 ? 0x02215D34 :
                                      game == 3 ? 0x021FF6E8 : 0x021FF728;
+    // Nintendo DS KEYINPUT is active-low: SELECT=bit2 START=bit3
+    // R=bit8 L=bit9. Record the first emulated frame with all held.
+    constexpr std::uint32_t ResetComboMask = 0x030C;
+    const bool reset_combo = (NDS::KeyInput & ResetComboMask) == 0;
+    const bool reset_combo_edge = reset_combo && !g_prev_reset_combo;
+    g_prev_reset_combo = reset_combo;
+    if (reset_combo_edge) g_latest_reset_combo_frame = h.frame_counter;
+
     const std::uint64_t rng = Read64(ram, rng_addr);
     const std::uint32_t mt = Read32(ram, mt_addr);
     const std::uint32_t index = Read32(ram, index_addr);
@@ -214,10 +232,11 @@ void OnFrame() {
     if (g_have_previous && g_rng == 0 && rng != 0) flags |= 8;
     if (rng != 0 && mt != 0 && (rng >> 32) == mt) flags |= 16;
     if (g_game != game) flags |= 32;
+    if (reset_combo_edge) flags |= 64;
 
     // Only record interesting edges. Current-seed matching alone is common
     // during idle: it is evidence, not a reset trigger.
-    if (flags & (1 | 2 | 4 | 8 | 32)) {
+    if (flags & (1 | 2 | 4 | 8 | 32 | 64)) {
         MTAudit audit;
         // Perform this extra verification only at the potential
         // initialization edge, never on every emulated frame.
@@ -241,5 +260,7 @@ void DeInit() {
     g_trace = nullptr;
     g_have_previous = false;
     g_game = 0;
+    g_prev_reset_combo = false;
+    g_latest_reset_combo_frame = 0;
 }
 }
