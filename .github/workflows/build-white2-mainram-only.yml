@@ -1,0 +1,58 @@
+name: White 2 vanilla melonDS MAINRAM-only NRO
+on:
+  push:
+    branches: [gen5-w2-vanilla-mainram-v0p1]
+    paths:
+      - '.github/workflows/build-white2-mainram-only.yml'
+      - 'gen5-build/patch_stock_white2_mainram.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get EXACT matching unmodified upstream source
+        run: |
+          git clone https://github.com/trulymust/melonDS-switch-upscale.git source
+          cd source
+          git checkout v0.8.0-switch-upscale.1
+          test "$(git rev-parse HEAD)" = "63d59ccc63cc574349982e176a08a4d479d507f4"
+          git submodule update --init --recursive
+      - name: Apply only MAINRAM label rendering patch
+        run: |
+          python3 gen5-build/patch_stock_white2_mainram.py source
+          git -C source diff --stat
+          test "$(git -C source diff --name-only)" = 'src/frontend/switch/main.cpp'
+          git -C source diff -- src/frontend/switch/main.cpp
+      - name: Compile NRO using Nintendo Switch devkitA64
+        run: |
+          mkdir -p source/build-white2-mainram
+          docker run --rm \
+            -v "$PWD/source:/work" \
+            -w /work/build-white2-mainram \
+            ghcr.io/autorunhq/switch-dev:latest sh -lc \
+            'export DEVKITPRO=/opt/devkitpro DEVKITA64=/opt/devkitpro/devkitA64; export PATH=/opt/devkitpro/devkitA64/bin:/opt/devkitpro/tools/bin:$PATH; cmake .. -G Ninja -DENABLE_OGLRENDERER=OFF -DBUILD_QT_SDL=OFF -DCMAKE_TOOLCHAIN_FILE=../cmake/Toolchain-cross-Switch.cmake -DCMAKE_BUILD_TYPE=Release && ninja -j2'
+      - name: Validate and package
+        run: |
+          cp source/build-white2-mainram/melonDS.nro melonDS-White2-MainRAM-Only-v0p1.nro
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          p=Path('melonDS-White2-MainRAM-Only-v0p1.nro')
+          b=p.read_bytes()
+          assert len(b) > 2000000 and b[0x10:0x14] == b'NRO0'
+          assert b'GEN5 MAINRAM: 0x%016llX' in b
+          assert b'PB5EVT' not in b and b'PB5AUTO' not in b
+          print('NRO size',len(b),'SHA256',hashlib.sha256(b).hexdigest())
+          PY
+          sha256sum melonDS-White2-MainRAM-Only-v0p1.nro > SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: melonDS-White2-MainRAM-Only-v0p1
+          path: |
+            melonDS-White2-MainRAM-Only-v0p1.nro
+            SHA256SUMS.txt
+          if-no-files-found: error
