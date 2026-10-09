@@ -1,0 +1,56 @@
+name: Gen5 v1.3 SHA1 Boot Context (Switch NRO)
+on:
+  push:
+    branches:
+      - gen5-melonds-sha1-preimage-v1p3
+    paths:
+      - '.github/workflows/build-gen5-v1p3-nro.yml'
+      - 'gen5-build/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clone pinned melonDS source
+        run: |
+          git clone https://github.com/trulymust/melonDS-switch-upscale.git source
+          cd source
+          git checkout 2f2a7fbf8d439fc40f15edb2c50ac00600d6dace
+          git submodule update --init --recursive
+      - name: Patch read-only boot input telemetry
+        run: |
+          python3 gen5-build/apply_to_melonds_source.py source
+          python3 gen5-build/add_gen5_pointer_overlay.py source
+          python3 gen5-build/apply_gen5_boottrace.py source
+          grep -n PB5EVT13 source/src/frontend/switch/Gen5BootTrace.cpp
+      - name: Build NRO via devkitPro toolchain
+        run: |
+          mkdir -p source/build-gen5-v1p3
+          docker run --rm \
+            -v "$PWD/source:/work" \
+            -w /work/build-gen5-v1p3 \
+            devkitpro/devkita64 sh -lc \
+            '. /opt/devkitpro/switchvars.sh; cmake .. -G Ninja -DENABLE_OGLRENDERER=OFF -DBUILD_QT_SDL=OFF -DCMAKE_TOOLCHAIN_FILE=../cmake/Toolchain-cross-Switch.cmake -DCMAKE_BUILD_TYPE=Release && ninja -j2'
+      - name: Validate and package NRO
+        run: |
+          test -s source/build-gen5-v1p3/melonDS.nro
+          cp source/build-gen5-v1p3/melonDS.nro melonDS-Gen5-SHA1BootAudit-v1p3.nro
+          python3 - <<'PY'
+          import pathlib
+          b=pathlib.Path('melonDS-Gen5-SHA1BootAudit-v1p3.nro').read_bytes()
+          assert b[0x10:0x14] == b'NRO0'
+          print('NRO bytes',len(b))
+          PY
+          sha256sum melonDS-Gen5-SHA1BootAudit-v1p3.nro > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: melonDS-Gen5-SHA1BootAudit-v1p3
+          path: |
+            melonDS-Gen5-SHA1BootAudit-v1p3.nro
+            SHA256SUMS.txt
+          if-no-files-found: error
