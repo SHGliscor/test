@@ -29,7 +29,7 @@ jobs:
           python3 gen5-build/apply_gen5_hw_reads.py source
           python3 gen5-build/apply_gen5_auto.py source
           grep -n Gen5Auto source/src/frontend/switch/main.cpp
-      - name: Compile Switch NRO with process-static bridge
+      - name: Compile Switch NRO with heap-mirrored pointer bridge
         run: |
           mkdir -p source/build-gen5-v1p6
           docker run --rm \
@@ -40,26 +40,26 @@ jobs:
       - name: Verify binary and construct discovery manifest
         run: |
           test -s source/build-gen5-v1p6/melonDS.nro
-          cp source/build-gen5-v1p6/melonDS.nro melonDS-Gen5-HeapHeapAutoBridge-v1p6.nro
+          cp source/build-gen5-v1p6/melonDS.nro melonDS-Gen5-HeapAutoBridge-v1p6.nro
           python3 - <<'PY'
           from pathlib import Path
           import json
-          b=Path('melonDS-Gen5-HeapHeapAutoBridge-v1p6.nro').read_bytes()
+          b=Path('melonDS-Gen5-HeapAutoBridge-v1p6.nro').read_bytes()
           assert b[0x10:0x14] == b'NRO0', 'Bad NRO header'
           Path('gen5_auto_manifest.json').write_text(json.dumps({
             'format':'PB5AUTO1','version':1,'size':104,
-            'discovery':'bounded_main_module_scan',
-            'scan_mib':8,
-            'note':'Release ELF is stripped; no symbol RVA. PC finds validated descriptor in main-module memory.'
+            'discovery':'bounded_main_module_and_heap_scan',
+            'scan_mib_heap':256,
+            'note':'Release ELF is stripped; no symbol RVA. PC scans for a validated descriptor in the NRO static module or heap-allocated mirror.'
           },indent=2)+'\\n')
           print('NRO bytes:',len(b),'descriptor search enabled')
           PY
-          sha256sum melonDS-Gen5-HeapHeapAutoBridge-v1p6.nro > SHA256SUMS.txt
+          sha256sum melonDS-Gen5-HeapAutoBridge-v1p6.nro > SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
           name: melonDS-Gen5-HeapAutoBridge-v1p6
           path: |
-            melonDS-Gen5-HeapHeapAutoBridge-v1p6.nro
+            melonDS-Gen5-HeapAutoBridge-v1p6.nro
             gen5_auto_manifest.json
             SHA256SUMS.txt
           if-no-files-found: error
