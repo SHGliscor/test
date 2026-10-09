@@ -1,8 +1,8 @@
-name: Gen5 v1.5 Heap-Mirrored Automatic Pointer Discovery NRO
+name: Gen5 v1.6 Heap-Mirrored Automatic Pointer Discovery NRO
 on:
   push:
     branches:
-      - gen5-melonds-auto-bridge-v1p6
+      - gen5-melonds-heap-bridge-v1p6
     paths:
       - '.github/workflows/build-gen5-v1p6-nro.yml'
       - 'gen5-build/**'
