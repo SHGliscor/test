@@ -35,8 +35,8 @@ jobs:
           docker run --rm \
             -v "$PWD/source:/work" \
             -w /work/build-gen5-v1p6 \
-            devkitpro/devkita64 sh -lc \
-            '. /opt/devkitpro/switchvars.sh; cmake .. -G Ninja -DENABLE_OGLRENDERER=OFF -DBUILD_QT_SDL=OFF -DCMAKE_TOOLCHAIN_FILE=../cmake/Toolchain-cross-Switch.cmake -DCMAKE_BUILD_TYPE=Release && ninja -j2'
+            ghcr.io/autorunhq/switch-dev:latest sh -lc \
+            'export DEVKITPRO=/opt/devkitpro DEVKITA64=/opt/devkitpro/devkitA64; export PATH=/opt/devkitpro/devkitA64/bin:/opt/devkitpro/tools/bin:$PATH; cmake .. -G Ninja -DENABLE_OGLRENDERER=OFF -DBUILD_QT_SDL=OFF -DCMAKE_TOOLCHAIN_FILE=../cmake/Toolchain-cross-Switch.cmake -DCMAKE_BUILD_TYPE=Release && ninja -j2'
       - name: Verify binary and construct discovery manifest
         run: |
           test -s source/build-gen5-v1p6/melonDS.nro
