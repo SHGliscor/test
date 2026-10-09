@@ -29,37 +29,30 @@ jobs:
           python3 gen5-build/apply_gen5_hw_reads.py source
           python3 gen5-build/apply_gen5_auto.py source
           grep -n Gen5Auto source/src/frontend/switch/main.cpp
-      - name: Compile Switch NRO and export descriptor symbol offset
+      - name: Compile Switch NRO with process-static bridge
         run: |
           mkdir -p source/build-gen5-v1p5
           docker run --rm \
             -v "$PWD/source:/work" \
             -w /work/build-gen5-v1p5 \
             devkitpro/devkita64 sh -lc \
-            '. /opt/devkitpro/switchvars.sh; cmake .. -G Ninja -DENABLE_OGLRENDERER=OFF -DBUILD_QT_SDL=OFF -DCMAKE_TOOLCHAIN_FILE=../cmake/Toolchain-cross-Switch.cmake -DCMAKE_BUILD_TYPE=Release && ninja -j2; echo --- ELF-EXPORTED SYMBOL ---; aarch64-none-elf-nm -n melonDS.elf | grep pokebot_gen5_auto_discovery'
+            '. /opt/devkitpro/switchvars.sh; cmake .. -G Ninja -DENABLE_OGLRENDERER=OFF -DBUILD_QT_SDL=OFF -DCMAKE_TOOLCHAIN_FILE=../cmake/Toolchain-cross-Switch.cmake -DCMAKE_BUILD_TYPE=Release && ninja -j2'
       - name: Verify binary and construct discovery manifest
         run: |
           test -s source/build-gen5-v1p5/melonDS.nro
           cp source/build-gen5-v1p5/melonDS.nro melonDS-Gen5-AutoBridge-v1p5.nro
-          docker run --rm -v "$PWD/source:/work" -w /work/build-gen5-v1p5 \
-            devkitpro/devkita64 sh -lc \
-            '. /opt/devkitpro/switchvars.sh; aarch64-none-elf-nm -n melonDS.elf | grep pokebot_gen5_auto_discovery' \
-              > symbol_address.txt
           python3 - <<'PY'
           from pathlib import Path
           import json
           b=Path('melonDS-Gen5-AutoBridge-v1p5.nro').read_bytes()
           assert b[0x10:0x14] == b'NRO0', 'Bad NRO header'
-          lines=Path('symbol_address.txt').read_text().strip().splitlines()
-          symbols=[v.split() for v in lines if v.strip().endswith('pokebot_gen5_auto_discovery')]
-          assert len(symbols)==1, f'Unexpected descriptor symbols: {symbols}'
-          off=int(symbols[0][0],16)
           Path('gen5_auto_manifest.json').write_text(json.dumps({
-            'format': 'PB5AUTO1', 'version': 1, 'size':104,
-            'elf_symbol_offset': f'0x{off:X}',
-            'note':'ELF symbol value is a discovery hint. PC must validate descriptor and DS game header before accepting.'
-          },indent=2)+'\n')
-          print('NRO bytes:',len(b),'descriptor ELF symbol:',hex(off))
+            'format':'PB5AUTO1','version':1,'size':104,
+            'discovery':'bounded_main_module_scan',
+            'scan_mib':8,
+            'note':'Release ELF is stripped; no symbol RVA. PC finds validated descriptor in main-module memory.'
+          },indent=2)+'\\n')
+          print('NRO bytes:',len(b),'descriptor search enabled')
           PY
           sha256sum melonDS-Gen5-AutoBridge-v1p5.nro > SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
@@ -68,6 +61,5 @@ jobs:
           path: |
             melonDS-Gen5-AutoBridge-v1p5.nro
             gen5_auto_manifest.json
-            symbol_address.txt
             SHA256SUMS.txt
           if-no-files-found: error
