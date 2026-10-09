@@ -59,6 +59,15 @@ void Publish(bool active) {
         static_cast<std::uint64_t>(Gen5BootTrace::BufferAddress()) : 0ULL;
     const std::uint32_t mask = active && ram ? NDS::MainRAMMask : 0;
     const std::uint32_t game = Game(ram, mask);
+    const std::uint32_t status =
+        (ram_ptr && trace_ptr && mask == 0x003FFFFF && game) ? 1 : 2;
+    // Stable during normal game execution: only update descriptor if the
+    // mapping or game actually changes, avoiding USB reads racing every frame.
+    if (d.mainram_ptr == ram_ptr && d.trace_ptr == trace_ptr &&
+        d.ram_mask == mask && d.game == game && d.status == status) {
+        __atomic_store_n(&d.sequence, old, __ATOMIC_RELEASE);
+        return;
+    }
     d.mainram_ptr = ram_ptr;
     d.trace_ptr = trace_ptr;
     d.mainram_inverse = ~ram_ptr;
@@ -68,7 +77,7 @@ void Publish(bool active) {
     d.ram_mask = mask;
     d.game = game;
     d.header_offset = 0x003FFE00;
-    d.status = (ram_ptr && trace_ptr && mask == 0x003FFFFF && game) ? 1 : 2;
+    d.status = status;
     __atomic_store_n(&d.sequence, old + 2, __ATOMIC_RELEASE);
 }
 }
