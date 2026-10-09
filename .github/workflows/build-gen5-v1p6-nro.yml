@@ -1,0 +1,65 @@
+name: Gen5 v1.5 Heap-Mirrored Automatic Pointer Discovery NRO
+on:
+  push:
+    branches:
+      - gen5-melonds-auto-bridge-v1p6
+    paths:
+      - '.github/workflows/build-gen5-v1p6-nro.yml'
+      - 'gen5-build/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch pinned Switch melonDS source
+        run: |
+          git clone https://github.com/trulymust/melonDS-switch-upscale.git source
+          cd source
+          git checkout 2f2a7fbf8d439fc40f15edb2c50ac00600d6dace
+          git submodule update --init --recursive
+      - name: Apply validated frame-trace plus new heap-mirror static discovery bridge
+        run: |
+          python3 gen5-build/apply_to_melonds_source.py source
+          python3 gen5-build/add_gen5_pointer_overlay.py source
+          python3 gen5-build/apply_gen5_boottrace.py source
+          python3 gen5-build/apply_gen5_hw_reads.py source
+          python3 gen5-build/apply_gen5_auto.py source
+          grep -n Gen5Auto source/src/frontend/switch/main.cpp
+      - name: Compile Switch NRO with process-static bridge
+        run: |
+          mkdir -p source/build-gen5-v1p6
+          docker run --rm \
+            -v "$PWD/source:/work" \
+            -w /work/build-gen5-v1p6 \
+            devkitpro/devkita64 sh -lc \
+            '. /opt/devkitpro/switchvars.sh; cmake .. -G Ninja -DENABLE_OGLRENDERER=OFF -DBUILD_QT_SDL=OFF -DCMAKE_TOOLCHAIN_FILE=../cmake/Toolchain-cross-Switch.cmake -DCMAKE_BUILD_TYPE=Release && ninja -j2'
+      - name: Verify binary and construct discovery manifest
+        run: |
+          test -s source/build-gen5-v1p6/melonDS.nro
+          cp source/build-gen5-v1p6/melonDS.nro melonDS-Gen5-HeapHeapAutoBridge-v1p6.nro
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          b=Path('melonDS-Gen5-HeapHeapAutoBridge-v1p6.nro').read_bytes()
+          assert b[0x10:0x14] == b'NRO0', 'Bad NRO header'
+          Path('gen5_auto_manifest.json').write_text(json.dumps({
+            'format':'PB5AUTO1','version':1,'size':104,
+            'discovery':'bounded_main_module_scan',
+            'scan_mib':8,
+            'note':'Release ELF is stripped; no symbol RVA. PC finds validated descriptor in main-module memory.'
+          },indent=2)+'\\n')
+          print('NRO bytes:',len(b),'descriptor search enabled')
+          PY
+          sha256sum melonDS-Gen5-HeapHeapAutoBridge-v1p6.nro > SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: melonDS-Gen5-HeapAutoBridge-v1p6
+          path: |
+            melonDS-Gen5-HeapHeapAutoBridge-v1p6.nro
+            gen5_auto_manifest.json
+            SHA256SUMS.txt
+          if-no-files-found: error
