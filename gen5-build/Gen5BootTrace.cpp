@@ -1,21 +1,25 @@
-// Gen 5 Reset Evidence v1.2. No writes to guest DS RAM; no buttons, cheats, save states.
+// Gen 5 SHA1 Boot Preimage Evidence v1.3. No writes to guest DS RAM; no buttons, cheats, save states.
 #include "Gen5BootTrace.h"
 #include "NDS.h"
+#include "Wifi.h"
+#include "GPU.h"
+#include "GPU3D.h"
+#include <ctime>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 
 namespace Gen5BootTrace {
 namespace {
-constexpr std::uint32_t Capacity = 128;
+constexpr std::uint32_t Capacity = 120;
 constexpr std::size_t AllocationSize = 0x5000;
 
 struct alignas(8) Header {
-    char magic[8];                 // "PB5EVT12"
-    std::uint32_t version;         // 3
+    char magic[8];                 // "PB5EVT13"
+    std::uint32_t version;         // 4
     std::uint32_t header_size;     // 64
-    std::uint32_t entry_size;      // 120
-    std::uint32_t capacity;        // 128
+    std::uint32_t entry_size;      // 160
+    std::uint32_t capacity;        // 120
     std::uint64_t total_events;    // committed events
     std::uint64_t frame_counter;   // NDS::RunFrame() calls observed
     std::uint64_t mainram_ptr;     // host pointer to DS RAM (may change)
@@ -49,9 +53,21 @@ struct alignas(8) Event {
     std::uint32_t key_input;        // KEYINPUT low16, active-low
     std::uint32_t input_reserved;
     std::uint64_t latest_reset_combo_frame; // 0 if never observed
+    // 40-byte host-side boot context: aids offline SHA1 parameter calibration.
+    // RTC is sampled at this frame boundary (NOT the game's SHA1 RTC read).
+    std::int64_t unix_seconds;
+    std::uint8_t rtc_bcd[7];    // YY MM DD day-of-week HH MM SS (Switch localtime)
+    std::uint8_t rtc_valid;
+    std::uint8_t wifi_mac[6];   // WiFi::GetMAC registers; must be validated
+    std::uint8_t mac_valid;
+    std::uint8_t mac_reserved;
+    std::uint32_t gpu_vcount;
+    std::uint32_t console_type;
+    std::uint32_t gxstat_at_frame;
+    std::uint32_t context_reserved;
 };
 static_assert(sizeof(Header) == 64, "BootTrace header layout mismatch");
-static_assert(sizeof(Event) == 120, "BootTrace event layout mismatch");
+static_assert(sizeof(Event) == 160, "BootTrace event layout mismatch");
 struct Trace {
     Header header;
     Event events[Capacity];
@@ -94,6 +110,10 @@ struct MTAudit {
     std::uint64_t expected_hash = 14695981039346656037ULL;
     std::uint32_t status = 0;
 };
+inline std::uint8_t BCD(unsigned val) {
+    return static_cast<std::uint8_t>(((val / 10) << 4) | (val % 10));
+}
+
 inline std::uint64_t FoldWord(std::uint64_t hash, std::uint32_t word) {
     for (int i=0; i<4; ++i) {
         hash ^= static_cast<std::uint8_t>(word >> (8*i));
@@ -155,6 +175,38 @@ void Record(std::uint64_t rng, std::uint32_t mt, std::uint32_t index,
     e.key_input = static_cast<std::uint32_t>(NDS::KeyInput & 0xFFFF);
     e.input_reserved = 0;
     e.latest_reset_combo_frame = g_latest_reset_combo_frame;
+
+    e.unix_seconds = static_cast<std::int64_t>(std::time(nullptr));
+    std::tm local{};
+    const std::time_t timestamp = static_cast<std::time_t>(e.unix_seconds);
+    std::memset(e.rtc_bcd, 0, sizeof(e.rtc_bcd));
+    e.rtc_valid = 0;
+    if (localtime_r(&timestamp, &local) != nullptr && local.tm_year >= 100) {
+        e.rtc_bcd[0] = BCD(static_cast<unsigned>((local.tm_year - 100) % 100));
+        e.rtc_bcd[1] = BCD(static_cast<unsigned>(local.tm_mon + 1));
+        e.rtc_bcd[2] = BCD(static_cast<unsigned>(local.tm_mday));
+        e.rtc_bcd[3] = BCD(static_cast<unsigned>(local.tm_wday));
+        e.rtc_bcd[4] = BCD(static_cast<unsigned>(local.tm_hour));
+        e.rtc_bcd[5] = BCD(static_cast<unsigned>(local.tm_min));
+        e.rtc_bcd[6] = BCD(static_cast<unsigned>(local.tm_sec));
+        e.rtc_valid = 1;
+    }
+    // MAC comes from live emulated WiFi IO registers.
+    // Whether this equals the seed's firmware MAC must be calibrated.
+    const std::uint8_t* mac = Wifi::GetMAC();
+    e.mac_valid = 0;
+    e.mac_reserved = 0;
+    std::memset(e.wifi_mac, 0, sizeof(e.wifi_mac));
+    if (mac != nullptr) {
+        std::memcpy(e.wifi_mac, mac, sizeof(e.wifi_mac));
+        for (unsigned k=0; k<6; ++k) {
+            if (e.wifi_mac[k] != 0) e.mac_valid = 1;
+        }
+    }
+    e.gpu_vcount = static_cast<std::uint32_t>(GPU::VCount);
+    e.console_type = static_cast<std::uint32_t>(NDS::ConsoleType);
+    e.gxstat_at_frame = GPU3D::Read32(0x04000600);
+    e.context_reserved = 0;
     __atomic_store_n(&e.sequence, seq, __ATOMIC_RELEASE);
     __atomic_store_n(&h.total_events, seq, __ATOMIC_RELEASE);
 }
@@ -166,8 +218,8 @@ void Init() {
     if (data == nullptr) return;
     std::memset(data, 0, AllocationSize);
     g_trace = static_cast<Trace*>(data);
-    std::memcpy(g_trace->header.magic, "PB5EVT12", 8);
-    g_trace->header.version = 3;
+    std::memcpy(g_trace->header.magic, "PB5EVT13", 8);
+    g_trace->header.version = 4;
     g_trace->header.header_size = sizeof(Header);
     g_trace->header.entry_size = sizeof(Event);
     g_trace->header.capacity = Capacity;
