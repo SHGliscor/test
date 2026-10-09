@@ -1,10 +1,12 @@
-// Gen 5 Auto Discovery v1.5: constant-format descriptor in NRO static memory.
+// Gen 5 Auto Discovery v1.6: mirrored pointer descriptor in NRO and heap.
 // Read-only to emulated DS game. Accessed externally via USB-Botbase peekAbsolute.
 // No network, controller, or memory mutation of the game.
 #include "Gen5Auto.h"
 #include "Gen5BootTrace.h"
 #include "NDS.h"
 #include <cstdint>
+#include <cstdlib>
+#include <cstring>
 
 struct alignas(8) Gen5AutoDiscovery {
     std::uint8_t magic[8];       // "PB5AUTO1"
@@ -49,25 +51,16 @@ std::uint32_t Game(const std::uint8_t* ram, std::uint32_t mask) {
     if (header[14] == 'D') return 4;
     return 0;
 }
-void Publish(bool active) {
-    auto& d = pokebot_gen5_auto_discovery;
-    const auto old = __atomic_load_n(&d.sequence, __ATOMIC_RELAXED);
-    __atomic_store_n(&d.sequence, old + 1, __ATOMIC_RELEASE);
-    const auto* ram = active ? NDS::MainRAM : nullptr;
-    const auto ram_ptr = reinterpret_cast<std::uint64_t>(ram);
-    const auto trace_ptr = active ?
-        static_cast<std::uint64_t>(Gen5BootTrace::BufferAddress()) : 0ULL;
-    const std::uint32_t mask = active && ram ? NDS::MainRAMMask : 0;
-    const std::uint32_t game = Game(ram, mask);
-    const std::uint32_t status =
-        (ram_ptr && trace_ptr && mask == 0x003FFFFF && game) ? 1 : 2;
-    // Stable during normal game execution: only update descriptor if the
-    // mapping or game actually changes, avoiding USB reads racing every frame.
+Gen5AutoDiscovery* g_heap_mirror = nullptr;
+
+void PublishTo(Gen5AutoDiscovery& d, std::uint64_t ram_ptr,
+               std::uint64_t trace_ptr, std::uint32_t mask,
+               std::uint32_t game, std::uint32_t status) {
+    // Keep the descriptor untouched on idle frames for stable USB snapshots.
     if (d.mainram_ptr == ram_ptr && d.trace_ptr == trace_ptr &&
-        d.ram_mask == mask && d.game == game && d.status == status) {
-        __atomic_store_n(&d.sequence, old, __ATOMIC_RELEASE);
-        return;
-    }
+        d.ram_mask == mask && d.game == game && d.status == status) return;
+    const auto prior = __atomic_load_n(&d.sequence, __ATOMIC_RELAXED);
+    __atomic_store_n(&d.sequence, prior + 1, __ATOMIC_RELEASE);
     d.mainram_ptr = ram_ptr;
     d.trace_ptr = trace_ptr;
     d.mainram_inverse = ~ram_ptr;
@@ -78,11 +71,48 @@ void Publish(bool active) {
     d.game = game;
     d.header_offset = 0x003FFE00;
     d.status = status;
-    __atomic_store_n(&d.sequence, old + 2, __ATOMIC_RELEASE);
+    __atomic_store_n(&d.sequence, prior + 2, __ATOMIC_RELEASE);
 }
+
+void Publish(bool active) {
+    const auto* ram = active ? NDS::MainRAM : nullptr;
+    const auto ram_ptr = reinterpret_cast<std::uint64_t>(ram);
+    const auto trace_ptr = active ?
+        static_cast<std::uint64_t>(Gen5BootTrace::BufferAddress()) : 0ULL;
+    const std::uint32_t mask = active && ram ? NDS::MainRAMMask : 0;
+    const std::uint32_t game = Game(ram, mask);
+    const std::uint32_t status =
+        (ram_ptr && trace_ptr && mask == 0x003FFFFF && game) ? 1 : 2;
+    PublishTo(pokebot_gen5_auto_discovery,
+              ram_ptr, trace_ptr, mask, game, status);
+    if (g_heap_mirror != nullptr)
+        PublishTo(*g_heap_mirror, ram_ptr, trace_ptr, mask, game, status);
+}
+
 }
 namespace Gen5Auto {
-void Init() { Publish(true); }
+void Init() {
+    // The NRO's static data may not be mapped at Koi's reported main NSO
+    // base. Allocate a *separate* 4 KiB heap page with an identical descriptor
+    // for a bounded getHeapBase-relative USB search. Never touch guest RAM.
+    if (g_heap_mirror == nullptr) {
+        void* page = aligned_alloc(0x1000, 0x1000);
+        if (page != nullptr) {
+            std::memset(page, 0, 0x1000);
+            auto* d = static_cast<Gen5AutoDiscovery*>(page);
+            std::memcpy(d, &pokebot_gen5_auto_discovery, sizeof(*d));
+            g_heap_mirror = d;
+        }
+    }
+    Publish(true);
+}
 void Update() { Publish(true); }
-void DeInit() { Publish(false); }
+void DeInit() {
+    Publish(false);
+    if (g_heap_mirror != nullptr) {
+        std::memset(g_heap_mirror, 0, 0x1000);
+        free(g_heap_mirror);
+        g_heap_mirror = nullptr;
+    }
+}
 }
