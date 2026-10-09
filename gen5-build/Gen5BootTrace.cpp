@@ -1,4 +1,4 @@
-// Gen 5 BootTrace v1.0. No writes to guest DS RAM; no buttons, cheats, save states.
+// Gen 5 Seed Audit v1.1. No writes to guest DS RAM; no buttons, cheats, save states.
 #include "Gen5BootTrace.h"
 #include "NDS.h"
 #include <cstdint>
@@ -7,15 +7,15 @@
 
 namespace Gen5BootTrace {
 namespace {
-constexpr std::uint32_t Capacity = 256;
+constexpr std::uint32_t Capacity = 128;
 constexpr std::size_t AllocationSize = 0x5000;
 
 struct alignas(8) Header {
-    char magic[8];                 // "PB5EVT10"
-    std::uint32_t version;         // 1
+    char magic[8];                 // "PB5EVT11"
+    std::uint32_t version;         // 2
     std::uint32_t header_size;     // 64
-    std::uint32_t entry_size;      // 64
-    std::uint32_t capacity;        // 256
+    std::uint32_t entry_size;      // 104
+    std::uint32_t capacity;        // 128
     std::uint64_t total_events;    // committed events
     std::uint64_t frame_counter;   // NDS::RunFrame() calls observed
     std::uint64_t mainram_ptr;     // host pointer to DS RAM (may change)
@@ -36,9 +36,19 @@ struct alignas(8) Event {
     std::uint32_t flags;           // 1=baseline 2=delay-drop 4=MT-change 8=0-to-seed 16=high32=MT 32=game-change
     std::uint64_t prev_rng;
     std::uint64_t reserved;
+    // Independent MT19937 initialization-array verification, sampled on the
+    // *same emulated frame* that the MT seed changes. This does not derive SHA-1.
+    std::uint32_t mt_checked_words;   // 624 if fully checked
+    std::uint32_t mt_first_bad_index; // 0xFFFFFFFF if no mismatch
+    std::uint32_t mt_actual_bad;
+    std::uint32_t mt_expected_bad;
+    std::uint64_t mt_observed_hash;
+    std::uint64_t mt_expected_hash;
+    std::uint32_t mt_audit_status;    // 0=not_checked,1=match,2=mismatch,3=not_seeded
+    std::uint32_t reserved2;
 };
 static_assert(sizeof(Header) == 64, "BootTrace header layout mismatch");
-static_assert(sizeof(Event) == 64, "BootTrace event layout mismatch");
+static_assert(sizeof(Event) == 104, "BootTrace event layout mismatch");
 struct Trace {
     Header header;
     Event events[Capacity];
@@ -73,8 +83,47 @@ std::uint32_t Game(const std::uint8_t* ram) {
     return 0;
 }
 
+struct MTAudit {
+    std::uint32_t checked = 0, first_bad = 0xFFFFFFFFu, bad_actual = 0, bad_expected = 0;
+    std::uint64_t observed_hash = 14695981039346656037ULL;
+    std::uint64_t expected_hash = 14695981039346656037ULL;
+    std::uint32_t status = 0;
+};
+inline std::uint64_t FoldWord(std::uint64_t hash, std::uint32_t word) {
+    for (int i=0; i<4; ++i) {
+        hash ^= static_cast<std::uint8_t>(word >> (8*i));
+        hash *= 1099511628211ULL;
+    }
+    return hash;
+}
+// Verify the real 624-word MT array, not just the first word. Only index 624
+// means the initial array should still be untouched by a twist/advance.
+MTAudit AuditMT(const std::uint8_t* ram, std::uint32_t mt_addr,
+                std::uint32_t seed, std::uint32_t index) {
+    MTAudit audit;
+    if (index != 624 || seed == 0) {
+        audit.status = 3;
+        return audit;
+    }
+    std::uint32_t expected = seed;
+    for (std::uint32_t i=0; i<624; ++i) {
+        if (i != 0)
+            expected = 1812433253u * (expected ^ (expected >> 30)) + i;
+        const std::uint32_t actual = Read32(ram, mt_addr + 4*i);
+        ++audit.checked;
+        audit.observed_hash = FoldWord(audit.observed_hash, actual);
+        audit.expected_hash = FoldWord(audit.expected_hash, expected);
+        if (actual != expected && audit.first_bad == 0xFFFFFFFFu) {
+            audit.first_bad = i;
+            audit.bad_actual = actual;
+            audit.bad_expected = expected;
+        }
+    }
+    audit.status = audit.first_bad == 0xFFFFFFFFu ? 1 : 2;
+    return audit;
+}
 void Record(std::uint64_t rng, std::uint32_t mt, std::uint32_t index,
-            std::uint32_t delay, std::uint32_t flags) {
+            std::uint32_t delay, std::uint32_t flags, const MTAudit& audit) {
     if (g_trace == nullptr) return;
     auto& h = g_trace->header;
     const std::uint64_t seq = h.total_events + 1;
@@ -90,6 +139,14 @@ void Record(std::uint64_t rng, std::uint32_t mt, std::uint32_t index,
     e.flags = flags;
     e.prev_rng = g_rng;
     e.reserved = 0;
+    e.mt_checked_words = audit.checked;
+    e.mt_first_bad_index = audit.first_bad;
+    e.mt_actual_bad = audit.bad_actual;
+    e.mt_expected_bad = audit.bad_expected;
+    e.mt_observed_hash = audit.observed_hash;
+    e.mt_expected_hash = audit.expected_hash;
+    e.mt_audit_status = audit.status;
+    e.reserved2 = 0;
     __atomic_store_n(&e.sequence, seq, __ATOMIC_RELEASE);
     __atomic_store_n(&h.total_events, seq, __ATOMIC_RELEASE);
 }
@@ -101,8 +158,8 @@ void Init() {
     if (data == nullptr) return;
     std::memset(data, 0, AllocationSize);
     g_trace = static_cast<Trace*>(data);
-    std::memcpy(g_trace->header.magic, "PB5EVT10", 8);
-    g_trace->header.version = 1;
+    std::memcpy(g_trace->header.magic, "PB5EVT11", 8);
+    g_trace->header.version = 2;
     g_trace->header.header_size = sizeof(Header);
     g_trace->header.entry_size = sizeof(Event);
     g_trace->header.capacity = Capacity;
@@ -160,8 +217,14 @@ void OnFrame() {
 
     // Only record interesting edges. Current-seed matching alone is common
     // during idle: it is evidence, not a reset trigger.
-    if (flags & (1 | 2 | 4 | 8 | 32))
-        Record(rng, mt, index, delay, flags);
+    if (flags & (1 | 2 | 4 | 8 | 32)) {
+        MTAudit audit;
+        // Perform this extra verification only at the potential
+        // initialization edge, never on every emulated frame.
+        if (flags & 4)
+            audit = AuditMT(ram, mt_addr, mt, index);
+        Record(rng, mt, index, delay, flags, audit);
+    }
 
     g_game = game;
     g_have_previous = true;
