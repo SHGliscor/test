@@ -1,0 +1,62 @@
+name: Gen5 v1.0 Emulator Frame Seed Trace (Switch NRO)
+
+on:
+  push:
+    branches:
+      - gen5-melonds-boottrace-v1p0
+    paths:
+      - '.github/workflows/build-gen5-v1p0-nro.yml'
+      - 'gen5-build/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clone pinned melonDS Switch source
+        run: |
+          git clone https://github.com/trulymust/melonDS-switch-upscale.git source
+          cd source
+          git checkout 2f2a7fbf8d439fc40f15edb2c50ac00600d6dace
+          git submodule update --init --recursive
+      - name: Inject existing MainRAM pointer export and v0.6 on-screen display
+        run: |
+          python3 gen5-build/apply_to_melonds_source.py source
+          python3 gen5-build/add_gen5_pointer_overlay.py source
+      - name: Instrument each emulated DS frame with read-only boot trace
+        run: |
+          python3 gen5-build/apply_gen5_boottrace.py source
+          grep -n Gen5BootTrace source/src/frontend/switch/main.cpp
+          grep -n Gen5BootTrace source/src/frontend/switch/CMakeLists.txt
+      - name: Build Switch NRO (devkitPro)
+        run: |
+          mkdir -p source/build-gen5-v1p0
+          docker run --rm \
+            -v "$PWD/source:/work" \
+            -w /work/build-gen5-v1p0 \
+            devkitpro/devkita64 sh -lc \
+            '. /opt/devkitpro/switchvars.sh; cmake .. -G Ninja -DENABLE_OGLRENDERER=OFF -DBUILD_QT_SDL=OFF -DCMAKE_TOOLCHAIN_FILE=../cmake/Toolchain-cross-Switch.cmake -DCMAKE_BUILD_TYPE=Release && ninja -j2'
+      - name: Verify and package
+        run: |
+          test -s source/build-gen5-v1p0/melonDS.nro
+          cp source/build-gen5-v1p0/melonDS.nro melonDS-Gen5-FrameTrace-v1p0.nro
+          python3 - <<'PY'
+          import pathlib,struct
+          data=pathlib.Path('melonDS-Gen5-FrameTrace-v1p0.nro').read_bytes()
+          assert data[0x10:0x14] == b'NRO0', 'Invalid NRO header'
+          print('NRO size:',len(data))
+          PY
+          sha256sum melonDS-Gen5-FrameTrace-v1p0.nro > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: melonDS-Gen5-FrameTrace-v1p0
+          path: |
+            melonDS-Gen5-FrameTrace-v1p0.nro
+            SHA256SUMS.txt
+          if-no-files-found: error
