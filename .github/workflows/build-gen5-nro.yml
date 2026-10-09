@@ -1,0 +1,58 @@
+name: Gen5 melonDS MainRAM Pointer Probe NRO
+
+on:
+  push:
+    branches:
+      - gen5-melonds-upscale-build-v0p5
+    paths:
+      - '.github/workflows/build-gen5-nro.yml'
+      - 'gen5-build/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout isolated probe branch
+        uses: actions/checkout@v4
+
+      - name: Clone pinned Switch Upscale source
+        run: |
+          git clone https://github.com/trulymust/melonDS-switch-upscale.git source
+          cd source
+          git checkout 2f2a7fbf8d439fc40f15edb2c50ac00600d6dace
+          git submodule update --init --recursive
+
+      - name: Patch melonDS's read-only MainRAM export
+        run: |
+          python3 gen5-build/apply_to_melonds_source.py source
+          grep -n POKEBOT_GEN5_BRIDGE_V1 source/src/ARMJIT_Memory.cpp
+
+      - name: Build Nintendo Switch NRO
+        run: |
+          mkdir -p source/build-gen5-probe
+          docker run --rm \
+            -v "$PWD/source:/work" \
+            -w /work/build-gen5-probe \
+            devkitpro/devkita64 sh -lc \
+            '. /opt/devkitpro/switchvars.sh; cmake .. -G Ninja -DENABLE_OGLRENDERER=OFF -DBUILD_QT_SDL=OFF -DCMAKE_TOOLCHAIN_FILE=../cmake/Toolchain-cross-Switch.cmake -DCMAKE_BUILD_TYPE=Release && ninja -j2'
+
+      - name: Verify built NRO and prepare output
+        run: |
+          test -s source/build-gen5-probe/melonDS.nro
+          cp source/build-gen5-probe/melonDS.nro ./melonDS-Gen5-PointerProbe.nro
+          sha256sum ./melonDS-Gen5-PointerProbe.nro > ./SHA256SUMS.txt
+          cat ./SHA256SUMS.txt
+
+      - name: Upload NRO and hash
+        uses: actions/upload-artifact@v4
+        with:
+          name: melonDS-Gen5-PointerProbe-NRO
+          path: |
+            melonDS-Gen5-PointerProbe.nro
+            SHA256SUMS.txt
+          if-no-files-found: error
